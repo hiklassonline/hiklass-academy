@@ -710,17 +710,17 @@ function smtpTimeoutMs() {
   return Number(process.env.SMTP_TIMEOUT_MS || 30000);
 }
 
-function envValue(primaryKey, legacyKey = '') {
-  const value = process.env[primaryKey] || (legacyKey ? process.env[legacyKey] : '') || '';
+function envValue(...keys) {
+  const value = keys.map((key) => process.env[key]).find((item) => item);
   return String(value).trim().replace(/^(['"])(.*)\1$/, '$2');
 }
 
 function smtpConfig(overrides = {}) {
-  const host = envValue('SMTP_HOST', 'MAIL_HOST');
+  const host = envValue('SMTP_HOST', 'MAIL_HOST', 'EMAIL_HOST') || 'smtp.hostinger.com';
   const port = Number(envValue('SMTP_PORT', 'MAIL_PORT') || 465);
   const secureValue = envValue('SMTP_SECURE', 'MAIL_SECURE') || 'true';
-  const user = envValue('SMTP_USER', 'MAIL_USER');
-  const pass = envValue('SMTP_PASS', 'MAIL_PASS');
+  const user = envValue('SMTP_USER', 'SMTP_USERNAME', 'MAIL_USER', 'MAIL_USERNAME', 'EMAIL_USER');
+  const pass = envValue('SMTP_PASS', 'SMTP_PASSWORD', 'MAIL_PASS', 'MAIL_PASSWORD', 'EMAIL_PASS', 'EMAIL_PASSWORD');
   return {
     host: overrides.host || host,
     port: overrides.port || port,
@@ -734,8 +734,8 @@ function smtpConfig(overrides = {}) {
 function smtpConfigCandidates() {
   const config = smtpConfig();
   const hosts = [
-    config.host,
     'smtp.hostinger.com',
+    config.host,
     'smtp.titan.email',
   ].filter(Boolean);
   const uniqueHosts = [...new Set(hosts.map((host) => host.trim()).filter(Boolean))];
