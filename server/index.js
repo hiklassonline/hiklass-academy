@@ -723,7 +723,7 @@ function smtpConfig(overrides = {}) {
   return {
     host: overrides.host || host,
     port: overrides.port || port,
-    secure: String(secureValue).toLowerCase() === 'true',
+    secure: typeof overrides.secure === 'boolean' ? overrides.secure : String(secureValue).toLowerCase() === 'true',
     user,
     pass,
     from: envValue('SMTP_FROM') || `"${BUSINESS_NAME}" <${user}>`,
@@ -738,7 +738,13 @@ function smtpConfigCandidates() {
     'smtp.titan.email',
   ].filter(Boolean);
   const uniqueHosts = [...new Set(hosts.map((host) => host.trim()).filter(Boolean))];
-  return uniqueHosts.map((host) => smtpConfig({ host }));
+  const candidates = [];
+  for (const host of uniqueHosts) {
+    candidates.push(smtpConfig({ host }));
+    candidates.push(smtpConfig({ host, port: 587, secure: false }));
+    candidates.push(smtpConfig({ host, port: 465, secure: true }));
+  }
+  return [...new Map(candidates.map((config) => [`${config.host}:${config.port}:${config.secure}`, config])).values()];
 }
 
 function createTransporter(config = smtpConfig()) {
