@@ -26,7 +26,9 @@ const ADMIN_LOGIN_EMAIL = process.env.ADMIN_LOGIN_EMAIL || ADMIN_EMAIL || 'admin
 let ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'HIKLASS Academy';
-const ORDER_RECEIVED_MESSAGE = 'Your order was saved successfully. HIKLASS Academy has received your request and will contact you shortly.';
+const ORDER_EMAIL_SENT_MESSAGE = 'Your order was saved successfully. An automated confirmation email has been sent to your email address.';
+const ORDER_EMAIL_FAILED_MESSAGE = 'Your order was saved successfully, but the automated confirmation email could not be sent.';
+const ORDER_EMAIL_INTRO = 'This automated email confirms that your order was saved successfully. Please keep this message for your records.';
 const EMAIL_LOGO_SVG_CID = 'hiklass-logo-horizontal-svg';
 const EMAIL_LOGO_PNG_CID = 'hiklass-email-logo-png';
 const EMAIL_WHATSAPP_SVG_CID = 'hiklass-whatsapp-svg';
@@ -1413,7 +1415,7 @@ function studentTemplate(order) {
     heroTitle: 'Enrollment Request Received',
     heroSubtitle: 'Thank you for choosing HIKLASS Academy.',
     greeting: `Hello <span style="color:#1E2F97">${safeEmailText(order.name)}</span>,`,
-    intro: ORDER_RECEIVED_MESSAGE,
+    intro: ORDER_EMAIL_INTRO,
     contentHtml: `
       ${twoColumnRow(selectedCoursesCard(order), selectedPackageCard(order))}
       ${twoColumnRow(studentInformationCard(order), totalAmountCard(order))}`,
@@ -1476,7 +1478,7 @@ function orderPlainText(order, heading = 'Enrollment Request Received') {
   return [
     `HIKLASS Academy - ${heading}`,
     '',
-    ORDER_RECEIVED_MESSAGE,
+    ORDER_EMAIL_INTRO,
     '',
     `Student: ${order.name || 'Not provided'}`,
     `Email: ${order.email || 'Not provided'}`,
@@ -1552,8 +1554,8 @@ async function sendOrderEmails(order) {
       adminEmail.status === 'rejected' ? `admin: ${explainSmtpError(adminEmail.reason, config)}` : '',
     ].filter(Boolean);
 
-    if (studentEmail.status === 'rejected' && adminEmail.status === 'rejected') {
-      throw new Error(failures.join(' | ') || 'Both student and admin emails failed.');
+    if (studentEmail.status === 'rejected') {
+      throw new Error(failures.join(' | ') || 'Student confirmation email failed.');
     }
 
     if (failures.length) {
@@ -2736,16 +2738,14 @@ async function handleOrder(req, res) {
   try {
     const emailResult = await sendOrderEmails(savedOrder);
     res.status(201).json({
-      message: emailResult.studentEmailSent
-        ? `${ORDER_RECEIVED_MESSAGE} A confirmation email has been sent.`
-        : ORDER_RECEIVED_MESSAGE,
+      message: ORDER_EMAIL_SENT_MESSAGE,
       orderId: savedOrder.id,
       totalAmount: savedOrder.totalAmount,
       subtotal: savedOrder.subtotal,
       discountCode: savedOrder.discountCode,
       discountAmount: savedOrder.discountAmount,
       grandTotal: savedOrder.grandTotal,
-      emailSent: true,
+      emailSent: emailResult.studentEmailSent,
       studentEmailSent: emailResult.studentEmailSent,
       adminEmailSent: emailResult.adminEmailSent,
       emailWarnings: emailResult.warnings,
@@ -2754,7 +2754,7 @@ async function handleOrder(req, res) {
     const emailError = explainSmtpError(error, error.smtpLastConfig);
     console.error('Email delivery failed:', emailError, error.smtpAttempts || []);
     res.status(202).json({
-      message: ORDER_RECEIVED_MESSAGE,
+      message: ORDER_EMAIL_FAILED_MESSAGE,
       orderId: savedOrder.id,
       totalAmount: savedOrder.totalAmount,
       subtotal: savedOrder.subtotal,
