@@ -150,7 +150,8 @@ The frontend output is `client/dist`. The SPA fallback lives in `client/public/.
 If Hostinger supports Node.js apps, deploy the backend with:
 
 ```text
-Startup file: server/index.js
+Application root: repository root
+Startup file: index.js
 Start command: npm start
 PORT: set by Hostinger or your env
 ```

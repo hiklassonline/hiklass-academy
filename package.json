@@ -2,13 +2,28 @@
   "name": "hiklass-holiday-courses-fullstack",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
+  "main": "index.js",
   "scripts": {
     "postinstall": "npm run install:all",
     "install:all": "npm install --prefix server && npm install --prefix client",
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "start": "npm start --prefix server",
-    "build": "npm run build --prefix client",
+    "start": "node index.js",
+    "build": "npm run install:all && npm run build --prefix client",
     "lint": "npm run lint --prefix server && npm run lint --prefix client"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

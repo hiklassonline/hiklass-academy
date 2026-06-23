@@ -52,9 +52,9 @@ Do not upload the development project folder, `node_modules`, log files, real `.
 Create or update the Node.js app for the subdomain with:
 
 ```text
-Application root: the uploaded deployment folder
+Application root: the repository root or uploaded deployment folder
 Application URL: https://hiklassacademy.com
-Startup file: server/index.js
+Startup file: index.js
 Start command: npm start
 Node.js version: 20.19 or newer
 ```
