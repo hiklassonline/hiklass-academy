@@ -809,6 +809,59 @@ async function createVerifiedTransporter() {
   throw error;
 }
 
+async function sendMailWithSmtpCandidates(mailOptions, label = 'email') {
+  if (!hasSmtpConfig()) {
+    throw new Error('SMTP is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS to server/.env.');
+  }
+
+  let lastError;
+  let lastConfig;
+  const attempts = [];
+
+  for (const config of smtpConfigCandidates()) {
+    let transporter;
+    try {
+      await checkSmtpPort(config);
+      transporter = createTransporter(config);
+      await withTimeout(
+        transporter.verify(),
+        smtpTimeoutMs(),
+        'SMTP verification timed out before authentication completed.',
+      );
+
+      const info = await withTimeout(
+        transporter.sendMail({
+          ...mailOptions,
+          from: config.from,
+        }),
+        smtpTimeoutMs(),
+        'SMTP timed out before email delivery completed.',
+      );
+
+      return { info, config, attempts };
+    } catch (error) {
+      lastError = error;
+      lastConfig = config;
+      const message = explainSmtpError(error, config);
+      attempts.push({
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        code: error?.code || 'SMTP_ERROR',
+        message,
+      });
+      console.error(`SMTP ${label} failed for ${config.host}:${config.port}:`, message);
+    } finally {
+      transporter?.close();
+    }
+  }
+
+  const error = lastError || new Error(`${label} delivery failed for every configured SMTP host.`);
+  error.smtpAttempts = attempts;
+  error.smtpLastConfig = lastConfig;
+  throw error;
+}
+
 function withTimeout(promise, ms, message) {
   let timer;
   const timeout = new Promise((_, reject) => {
@@ -1516,60 +1569,39 @@ function enrollmentStatusPlainText(order) {
 }
 
 async function sendOrderEmails(order) {
-  const smtp = await createVerifiedTransporter();
-  if (!smtp?.transporter) {
-    throw new Error('SMTP is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS to server/.env.');
-  }
-
-  const { transporter, config } = smtp;
-  const from = config.from;
   const logoAttachments = emailLogoAttachments();
+  const studentEmail = await sendMailWithSmtpCandidates({
+    to: order.email,
+    subject: 'Enrollment Request Received',
+    text: orderPlainText(order),
+    html: studentTemplate(order),
+    attachments: logoAttachments,
+  }, 'student confirmation email');
+
+  let adminEmailSent = false;
+  const warnings = [];
+
   try {
-    const [studentEmail, adminEmail] = await withTimeout(
-      Promise.allSettled([
-        transporter.sendMail({
-          from,
-          to: order.email,
-          subject: 'Enrollment Request Received',
-          text: orderPlainText(order),
-          html: studentTemplate(order),
-          attachments: logoAttachments,
-        }),
-        transporter.sendMail({
-          from,
-          to: ADMIN_EMAIL,
-          replyTo: order.email,
-          subject: `New Course Enrollment Request from ${order.name}`,
-          text: orderPlainText(order, 'New Course Enrollment Request'),
-          html: adminTemplate(order),
-          attachments: logoAttachments,
-        }),
-      ]),
-      smtpTimeoutMs(),
-      'SMTP timed out before email delivery completed.',
-    );
-
-    const failures = [
-      studentEmail.status === 'rejected' ? `student: ${explainSmtpError(studentEmail.reason, config)}` : '',
-      adminEmail.status === 'rejected' ? `admin: ${explainSmtpError(adminEmail.reason, config)}` : '',
-    ].filter(Boolean);
-
-    if (studentEmail.status === 'rejected') {
-      throw new Error(failures.join(' | ') || 'Student confirmation email failed.');
-    }
-
-    if (failures.length) {
-      console.warn('Partial email delivery failure:', failures.join(' | '));
-    }
-
-    return {
-      studentEmailSent: studentEmail.status === 'fulfilled',
-      adminEmailSent: adminEmail.status === 'fulfilled',
-      warnings: failures,
-    };
-  } finally {
-    transporter.close();
+    await sendMailWithSmtpCandidates({
+      to: ADMIN_EMAIL,
+      replyTo: order.email,
+      subject: `New Course Enrollment Request from ${order.name}`,
+      text: orderPlainText(order, 'New Course Enrollment Request'),
+      html: adminTemplate(order),
+      attachments: logoAttachments,
+    }, 'admin notification email');
+    adminEmailSent = true;
+  } catch (error) {
+    const warning = `admin: ${explainSmtpError(error, error.smtpLastConfig)}`;
+    warnings.push(warning);
+    console.warn('Partial email delivery failure:', warning);
   }
+
+  return {
+    studentEmailSent: Boolean(studentEmail.info),
+    adminEmailSent,
+    warnings,
+  };
 }
 
 async function sendEnrollmentStatusEmail(order) {
