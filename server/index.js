@@ -10,7 +10,7 @@ import fs from 'fs';
 import fsp from 'fs/promises';
 import net from 'net';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 dotenv.config();
 
@@ -26,6 +26,7 @@ const ADMIN_LOGIN_EMAIL = process.env.ADMIN_LOGIN_EMAIL || ADMIN_EMAIL || 'admin
 let ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'HIKLASS Academy';
+const ORDER_RECEIVED_MESSAGE = 'Your order was saved successfully. HIKLASS Academy has received your request and will contact you shortly.';
 const EMAIL_LOGO_SVG_CID = 'hiklass-logo-horizontal-svg';
 const EMAIL_LOGO_PNG_CID = 'hiklass-email-logo-png';
 const EMAIL_WHATSAPP_SVG_CID = 'hiklass-whatsapp-svg';
@@ -909,15 +910,8 @@ function emailLogoAssets() {
 }
 
 function emailLogoAttachments() {
-  const { svgPath, pngPath, whatsappSvgPath, socialIconsSvgPath } = emailLogoAssets();
+  const { pngPath } = emailLogoAssets();
   return [
-    svgPath
-      ? {
-          filename: 'logo-horizontal.svg',
-          path: svgPath,
-          cid: EMAIL_LOGO_SVG_CID,
-        }
-      : null,
     pngPath
       ? {
           filename: path.basename(pngPath),
@@ -925,26 +919,12 @@ function emailLogoAttachments() {
           cid: EMAIL_LOGO_PNG_CID,
         }
       : null,
-    whatsappSvgPath
-      ? {
-          filename: 'whatsapp.svg',
-          path: whatsappSvgPath,
-          cid: EMAIL_WHATSAPP_SVG_CID,
-        }
-      : null,
-    socialIconsSvgPath
-      ? {
-          filename: 'social-icons.svg',
-          path: socialIconsSvgPath,
-          cid: EMAIL_SOCIAL_ICONS_SVG_CID,
-        }
-      : null,
   ].filter(Boolean);
 }
 
 function emailLogoHeader() {
-  const { svgPath, pngPath } = emailLogoAssets();
-  const logoSrc = svgPath ? `cid:${EMAIL_LOGO_SVG_CID}` : pngPath ? `cid:${EMAIL_LOGO_PNG_CID}` : '';
+  const { pngPath } = emailLogoAssets();
+  const logoSrc = pngPath ? `cid:${EMAIL_LOGO_PNG_CID}` : '';
   const logoHtml = logoSrc
     ? `<img class="hiklass-email-logo" src="${logoSrc}" width="260" alt="HIKLASS Academy" style="display:block;width:260px;max-width:100%;height:auto;margin:0 auto;border:0;outline:none;text-decoration:none">`
     : `<strong style="display:block;color:#1E2F97;font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:1.2;text-align:center">HIKLASS Academy</strong>`;
@@ -1313,9 +1293,7 @@ function ctaBlock({
 }
 
 function assistanceStrip() {
-  const whatsappIcon = emailLogoAssets().whatsappSvgPath
-    ? `<span style="display:inline-block;width:34px;height:34px;border-radius:50%;background:#1B5E20;text-align:center"><img src="cid:${EMAIL_WHATSAPP_SVG_CID}" width="21" height="21" alt="WhatsApp" style="display:inline-block;border:0;width:21px;height:21px;margin-top:6px"></span>`
-    : '<span style="display:inline-block;width:34px;height:34px;border-radius:50%;background:#1B5E20;color:#FFFFFF;font-size:20px;line-height:34px;text-align:center;font-weight:700">W</span>';
+  const whatsappIcon = '<span style="display:inline-block;width:34px;height:34px;border-radius:50%;background:#1B5E20;color:#FFFFFF;font-size:20px;line-height:34px;text-align:center;font-weight:700">W</span>';
   const whatsappMessage = encodeURIComponent('Hi HIKLASS Academy, I need assistance.');
   const primaryWhatsAppLink = `https://wa.me/${WHATSAPP_PRIMARY}?text=${whatsappMessage}`;
 
@@ -1354,9 +1332,7 @@ function assistanceStrip() {
 }
 
 function footerBlock() {
-  const socialIcons = emailLogoAssets().socialIconsSvgPath
-    ? `<img src="cid:${EMAIL_SOCIAL_ICONS_SVG_CID}" width="220" alt="Facebook, Instagram, LinkedIn, YouTube, and WhatsApp" style="display:block;width:220px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;margin:0 auto">`
-    : `<span style="display:inline-block;color:#1E2F97;font-size:13px;line-height:18px;font-weight:700">Facebook &nbsp; Instagram &nbsp; LinkedIn &nbsp; YouTube &nbsp; WhatsApp</span>`;
+  const socialIcons = `<span style="display:inline-block;color:#1E2F97;font-size:13px;line-height:18px;font-weight:700">Facebook &nbsp; Instagram &nbsp; LinkedIn &nbsp; YouTube &nbsp; WhatsApp</span>`;
 
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:22px;border-top:1px solid #E5E7EB">
@@ -1437,8 +1413,7 @@ function studentTemplate(order) {
     heroTitle: 'Enrollment Request Received',
     heroSubtitle: 'Thank you for choosing HIKLASS Academy.',
     greeting: `Hello <span style="color:#1E2F97">${safeEmailText(order.name)}</span>,`,
-    intro:
-      'We have successfully received your enrollment request. Our admissions team will review your submission and contact you shortly with the next steps.',
+    intro: ORDER_RECEIVED_MESSAGE,
     contentHtml: `
       ${twoColumnRow(selectedCoursesCard(order), selectedPackageCard(order))}
       ${twoColumnRow(studentInformationCard(order), totalAmountCard(order))}`,
@@ -1494,6 +1469,50 @@ function enrollmentStatusTemplate(order) {
   });
 }
 
+function orderPlainText(order, heading = 'Enrollment Request Received') {
+  const courseLines = (order.courses || []).map((course) => `- ${courseTitle(course)}: ${formatXaf(coursePrice(course))}`);
+  const packageLines = (order.packages || []).map((item) => `- ${packageName(item)} (${packageDuration(item)}): ${formatXaf(packagePrice(item))}`);
+
+  return [
+    `HIKLASS Academy - ${heading}`,
+    '',
+    ORDER_RECEIVED_MESSAGE,
+    '',
+    `Student: ${order.name || 'Not provided'}`,
+    `Email: ${order.email || 'Not provided'}`,
+    `Phone: ${order.phone || 'Not provided'}`,
+    `Learning mode: ${order.mode || 'Not provided'}`,
+    `Payment method: ${order.paymentMethod || 'Not provided'}`,
+    '',
+    'Selected courses:',
+    courseLines.length ? courseLines.join('\n') : '- No individual course selected.',
+    '',
+    'Selected packages:',
+    packageLines.length ? packageLines.join('\n') : '- No package selected.',
+    '',
+    `Subtotal: ${formatXaf(orderSubtotal(order))}`,
+    `Discount code: ${order.discountCode || 'None'}`,
+    `Discount: -${formatXaf(orderDiscountAmount(order))}`,
+    `Grand total: ${formatXaf(orderGrandTotal(order))}`,
+    '',
+    'Need assistance? WhatsApp +237 651 251 941 or email info@hiklassacademy.com.',
+  ].join('\n');
+}
+
+function enrollmentStatusPlainText(order) {
+  const status = order.status || 'Pending';
+  return [
+    `HIKLASS Academy - Enrollment Status Updated`,
+    '',
+    `Hello ${order.name || 'Student'},`,
+    `Your enrollment status is now ${status}.`,
+    `Enrollment ID: ${order.id || 'Not provided'}`,
+    `Updated at: ${formatSubmissionDate(order.statusUpdatedAt || new Date().toISOString())}`,
+    '',
+    orderPlainText(order, 'Enrollment Details'),
+  ].join('\n');
+}
+
 async function sendOrderEmails(order) {
   const smtp = await createVerifiedTransporter();
   if (!smtp?.transporter) {
@@ -1510,6 +1529,7 @@ async function sendOrderEmails(order) {
           from,
           to: order.email,
           subject: 'Enrollment Request Received',
+          text: orderPlainText(order),
           html: studentTemplate(order),
           attachments: logoAttachments,
         }),
@@ -1518,6 +1538,7 @@ async function sendOrderEmails(order) {
           to: ADMIN_EMAIL,
           replyTo: order.email,
           subject: `New Course Enrollment Request from ${order.name}`,
+          text: orderPlainText(order, 'New Course Enrollment Request'),
           html: adminTemplate(order),
           attachments: logoAttachments,
         }),
@@ -1563,6 +1584,7 @@ async function sendEnrollmentStatusEmail(order) {
         from,
         to: order.email,
         subject: `HIKLASS Enrollment Status Updated: ${order.status}`,
+        text: enrollmentStatusPlainText(order),
         html: enrollmentStatusTemplate(order),
         attachments: emailLogoAttachments(),
       }),
@@ -2715,8 +2737,8 @@ async function handleOrder(req, res) {
     const emailResult = await sendOrderEmails(savedOrder);
     res.status(201).json({
       message: emailResult.studentEmailSent
-        ? 'Your order was submitted successfully. A confirmation email has been sent.'
-        : 'Your order was submitted successfully. HIKLASS Academy has been notified and will contact you shortly.',
+        ? `${ORDER_RECEIVED_MESSAGE} A confirmation email has been sent.`
+        : ORDER_RECEIVED_MESSAGE,
       orderId: savedOrder.id,
       totalAmount: savedOrder.totalAmount,
       subtotal: savedOrder.subtotal,
@@ -2732,7 +2754,7 @@ async function handleOrder(req, res) {
     const emailError = explainSmtpError(error, error.smtpLastConfig);
     console.error('Email delivery failed:', emailError, error.smtpAttempts || []);
     res.status(202).json({
-      message: 'Your order was saved successfully. HIKLASS Academy has received your request and will contact you shortly.',
+      message: ORDER_RECEIVED_MESSAGE,
       orderId: savedOrder.id,
       totalAmount: savedOrder.totalAmount,
       subtotal: savedOrder.subtotal,
@@ -2841,6 +2863,17 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ message: 'Internal server error.' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+export {
+  app,
+  enrichOrder,
+  sendOrderEmails,
+  studentTemplate,
+  adminTemplate,
+  enrollmentStatusTemplate,
+};
