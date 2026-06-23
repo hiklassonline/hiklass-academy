@@ -2863,15 +2863,20 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ message: 'Internal server error.' });
 });
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+function startServer(port = PORT) {
+  return app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
   });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startServer();
 }
 
 export {
   app,
   enrichOrder,
+  startServer,
   sendOrderEmails,
   studentTemplate,
   adminTemplate,
