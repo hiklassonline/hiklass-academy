@@ -766,6 +766,8 @@ async function createVerifiedTransporter() {
   if (!hasSmtpConfig()) return null;
 
   let lastError;
+  let lastConfig;
+  const attempts = [];
   for (const config of smtpConfigCandidates()) {
     let transporter;
     try {
@@ -780,11 +782,22 @@ async function createVerifiedTransporter() {
     } catch (error) {
       transporter?.close();
       lastError = error;
+      lastConfig = config;
+      attempts.push({
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        code: error?.code || 'SMTP_ERROR',
+        message: explainSmtpError(error, config),
+      });
       console.error(`SMTP verification failed for ${config.host}:${config.port}:`, explainSmtpError(error, config));
     }
   }
 
-  throw lastError || new Error('SMTP verification failed for every configured host.');
+  const error = lastError || new Error('SMTP verification failed for every configured host.');
+  error.smtpAttempts = attempts;
+  error.smtpLastConfig = lastConfig;
+  throw error;
 }
 
 function withTimeout(promise, ms, message) {
@@ -1591,7 +1604,7 @@ app.get('/api/email/status', emailStatusLimiter, async (_req, res) => {
       message: 'SMTP is reachable and authentication succeeded.',
     });
   } catch (error) {
-    const config = smtpConfig();
+    const config = error.smtpLastConfig || smtpConfig();
     res.status(503).json({
       configured: true,
       reachable: false,
@@ -1599,7 +1612,8 @@ app.get('/api/email/status', emailStatusLimiter, async (_req, res) => {
       host: config.host,
       port: config.port,
       secure: config.secure,
-      message: explainSmtpError(error),
+      attemptedHosts: error.smtpAttempts || [],
+      message: explainSmtpError(error, config),
       code: error.code || 'SMTP_UNREACHABLE',
     });
   }
@@ -2709,10 +2723,10 @@ async function handleOrder(req, res) {
       emailWarnings: emailResult.warnings,
     });
   } catch (error) {
-    const emailError = explainSmtpError(error);
-    console.error('Email delivery failed:', emailError);
+    const emailError = explainSmtpError(error, error.smtpLastConfig);
+    console.error('Email delivery failed:', emailError, error.smtpAttempts || []);
     res.status(202).json({
-      message: `Your order was saved, but email could not be sent: ${emailError} Please use the WhatsApp buttons to follow up immediately.`,
+      message: 'Your order was saved successfully. HIKLASS Academy has received your request and will contact you shortly.',
       orderId: savedOrder.id,
       totalAmount: savedOrder.totalAmount,
       subtotal: savedOrder.subtotal,
@@ -2721,6 +2735,7 @@ async function handleOrder(req, res) {
       grandTotal: savedOrder.grandTotal,
       emailSent: false,
       emailError,
+      emailAttempts: error.smtpAttempts || [],
     });
   }
 }
