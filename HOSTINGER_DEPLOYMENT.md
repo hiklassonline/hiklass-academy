@@ -20,6 +20,7 @@ This command:
 - removes old generated packages inside `deploy`
 - runs `npm run lint`
 - runs `npm run build`
+- creates root `dist/` for Hostinger GitHub/static deployment
 - creates `deploy\hiklass-holiday-courses-node-hostinger-YYYYMMDD-HHMMSS`
 - creates `deploy\hiklass-holiday-courses-public_html-YYYYMMDD-HHMMSS`
 - creates matching `.zip` files in `deploy`
@@ -107,3 +108,15 @@ If the Hostinger plan does not support Node.js apps, upload the newest `hiklass-
 This package contains `index.html` at the upload root and includes a `.htaccess` file for React page refreshes, so it should not produce the 403 directory listing error.
 
 The website will load, but registration, admin APIs, saved orders, uploads, and email delivery will not work until the backend runs on Node.js.
+
+## GitHub Static Deployment Settings
+
+If Hostinger deploys this repository as a static site from GitHub, use:
+
+```text
+Install command: npm install
+Build command: npm run build
+Publish/output directory: dist
+```
+
+The root `dist/` folder is generated from `client/dist/` after each build so Hostinger can find `dist/index.html`.

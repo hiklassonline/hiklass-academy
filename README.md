@@ -145,7 +145,15 @@ Build the frontend:
 npm run build
 ```
 
-The frontend output is `client/dist`. The SPA fallback lives in `client/public/.htaccess`, so Vite copies it into `dist` during the build. Upload the contents of `client/dist` to the Hostinger subdomain document root, such as `public_html/academy` or the subdomain folder.
+The frontend output is `client/dist`, and the root build also syncs it to `dist` for Hostinger GitHub/static deployments. The SPA fallback lives in `client/public/.htaccess`, so Vite copies it into the build during the build. Upload the contents of `client/dist` or root `dist` to the Hostinger subdomain document root, such as `public_html/academy` or the subdomain folder.
+
+For Hostinger GitHub/static deployment, use:
+
+```text
+Install command: npm install
+Build command: npm run build
+Publish/output directory: dist
+```
 
 If Hostinger supports Node.js apps, deploy the backend with:
 

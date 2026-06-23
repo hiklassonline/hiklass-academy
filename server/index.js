@@ -2768,12 +2768,17 @@ app.delete('/api/admin/profile/avatar', requireAdmin, async (_req, res) => {
   } catch { res.status(500).json({ success: false, message: 'Could not remove avatar.' }); }
 });
 
-const clientDist = path.join(__dirname, '..', 'client', 'dist');
+const clientDistCandidates = [
+  path.join(__dirname, '..', 'client', 'dist'),
+  path.join(__dirname, '..', 'dist'),
+];
+const clientDist = clientDistCandidates.find((candidate) => fs.existsSync(path.join(candidate, 'index.html')))
+  || clientDistCandidates[0];
 app.use('/api', (_req, res) => {
   res.status(404).json({ message: 'API route not found.' });
 });
 
-if (fs.existsSync(clientDist)) {
+if (fs.existsSync(path.join(clientDist, 'index.html'))) {
   app.use(express.static(clientDist));
   app.get('*', (_req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
