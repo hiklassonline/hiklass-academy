@@ -819,40 +819,49 @@ async function sendMailWithSmtpCandidates(mailOptions, label = 'email') {
   const attempts = [];
 
   for (const config of smtpConfigCandidates()) {
-    let transporter;
-    try {
-      await checkSmtpPort(config);
-      transporter = createTransporter(config);
-      await withTimeout(
-        transporter.verify(),
-        smtpTimeoutMs(),
-        'SMTP verification timed out before authentication completed.',
-      );
+    const mailVariants = [
+      mailOptions,
+      mailOptions.attachments?.length ? { ...mailOptions, attachments: [] } : null,
+    ].filter(Boolean);
 
-      const info = await withTimeout(
-        transporter.sendMail({
-          ...mailOptions,
-          from: config.from,
-        }),
-        smtpTimeoutMs(),
-        'SMTP timed out before email delivery completed.',
-      );
+    for (const variant of mailVariants) {
+      let transporter;
+      const variantLabel = variant.attachments?.length ? 'with attachments' : 'without attachments';
+      try {
+        await checkSmtpPort(config);
+        transporter = createTransporter(config);
+        await withTimeout(
+          transporter.verify(),
+          smtpTimeoutMs(),
+          'SMTP verification timed out before authentication completed.',
+        );
 
-      return { info, config, attempts };
-    } catch (error) {
-      lastError = error;
-      lastConfig = config;
-      const message = explainSmtpError(error, config);
-      attempts.push({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        code: error?.code || 'SMTP_ERROR',
-        message,
-      });
-      console.error(`SMTP ${label} failed for ${config.host}:${config.port}:`, message);
-    } finally {
-      transporter?.close();
+        const info = await withTimeout(
+          transporter.sendMail({
+            ...variant,
+            from: config.from,
+          }),
+          smtpTimeoutMs(),
+          'SMTP timed out before email delivery completed.',
+        );
+
+        return { info, config, attempts };
+      } catch (error) {
+        lastError = error;
+        lastConfig = config;
+        const message = explainSmtpError(error, config);
+        attempts.push({
+          host: config.host,
+          port: config.port,
+          secure: config.secure,
+          attachments: Boolean(variant.attachments?.length),
+          code: error?.code || 'SMTP_ERROR',
+          message,
+        });
+        console.error(`SMTP ${label} failed for ${config.host}:${config.port} ${variantLabel}:`, message);
+      } finally {
+        transporter?.close();
+      }
     }
   }
 
@@ -2786,7 +2795,7 @@ async function handleOrder(req, res) {
     const emailError = explainSmtpError(error, error.smtpLastConfig);
     console.error('Email delivery failed:', emailError, error.smtpAttempts || []);
     res.status(202).json({
-      message: ORDER_EMAIL_FAILED_MESSAGE,
+      message: `${ORDER_EMAIL_FAILED_MESSAGE} ${emailError}`,
       orderId: savedOrder.id,
       totalAmount: savedOrder.totalAmount,
       subtotal: savedOrder.subtotal,

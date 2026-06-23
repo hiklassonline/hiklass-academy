@@ -889,9 +889,9 @@ function EnrollmentForm({ selectedCourses, selectedPackages, setSelectedCourses,
 
       setStatus({
         type: data.emailSent ? 'success' : 'warning',
-        message: data.emailSent
-          ? data.message || 'Your order was received.'
-          : data.message || 'Your order was saved, but email could not be sent from this server. Please use WhatsApp to follow up immediately.',
+        message: data.message || (data.emailSent
+          ? 'Your order was received and the automated confirmation email was sent.'
+          : 'Your order was saved, but the automated confirmation email could not be sent.'),
       });
       setForm({ ...initialForm, paymentMethod: '' });
       setSelectedCourses([]);
