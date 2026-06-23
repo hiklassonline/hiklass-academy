@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Cybersecurity icon">
+  <rect width="96" height="96" rx="20" fill="#1E2F97"/>
+  <path d="M48 16 73 27v18c0 17-10 29-25 35-15-6-25-18-25-35V27l25-11Z" fill="#2554A5" stroke="#FFFFFF" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M39 48h18M42 48v-7a6 6 0 0 1 12 0v7M40 48v15h16V48" fill="none" stroke="#C6C6C6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="48" cy="56" r="3" fill="#D30D1A"/>
+</svg>

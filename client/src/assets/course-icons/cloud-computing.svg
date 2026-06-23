@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Cloud computing icon">
+  <rect width="96" height="96" rx="20" fill="#1E2F97"/>
+  <circle cx="72" cy="24" r="12" fill="#D30D1A" opacity=".86"/>
+  <path d="M33 65h34a14 14 0 0 0 1-28 22 22 0 0 0-41-5 17 17 0 0 0 6 33Z" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M37 74h22M48 64v10M38 49h20" stroke="#C6C6C6" stroke-width="5" stroke-linecap="round"/>
+</svg>

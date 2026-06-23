@@ -1,0 +1,34 @@
+# dependencies
+node_modules
+
+# logs
+logs
+*.log
+
+# build files
+dist
+build
+deploy
+
+# environment variables
+.env
+.env.local
+.env.production
+.env.*
+!.env.example
+!server/.env.example
+
+# uploads
+uploads
+server/uploads
+
+# local data
+server/data/*.json
+storage/*.json
+
+# VS Code
+.vscode
+
+# OS files
+.DS_Store
+Thumbs.db
