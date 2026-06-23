@@ -710,29 +710,40 @@ function smtpTimeoutMs() {
 }
 
 function envValue(primaryKey, legacyKey = '') {
-  return process.env[primaryKey] || (legacyKey ? process.env[legacyKey] : '') || '';
+  const value = process.env[primaryKey] || (legacyKey ? process.env[legacyKey] : '') || '';
+  return String(value).trim().replace(/^(['"])(.*)\1$/, '$2');
 }
 
-function smtpConfig() {
+function smtpConfig(overrides = {}) {
   const host = envValue('SMTP_HOST', 'MAIL_HOST');
   const port = Number(envValue('SMTP_PORT', 'MAIL_PORT') || 465);
   const secureValue = envValue('SMTP_SECURE', 'MAIL_SECURE') || 'true';
   const user = envValue('SMTP_USER', 'MAIL_USER');
   const pass = envValue('SMTP_PASS', 'MAIL_PASS');
   return {
-    host,
-    port,
+    host: overrides.host || host,
+    port: overrides.port || port,
     secure: String(secureValue).toLowerCase() === 'true',
     user,
     pass,
-    from: process.env.SMTP_FROM || `"${BUSINESS_NAME}" <${user}>`,
+    from: envValue('SMTP_FROM') || `"${BUSINESS_NAME}" <${user}>`,
   };
 }
 
-function createTransporter() {
+function smtpConfigCandidates() {
+  const config = smtpConfig();
+  const hosts = [
+    config.host,
+    'smtp.hostinger.com',
+    'smtp.titan.email',
+  ].filter(Boolean);
+  const uniqueHosts = [...new Set(hosts.map((host) => host.trim()).filter(Boolean))];
+  return uniqueHosts.map((host) => smtpConfig({ host }));
+}
+
+function createTransporter(config = smtpConfig()) {
   if (!hasSmtpConfig()) return null;
   const timeout = smtpTimeoutMs();
-  const config = smtpConfig();
   return nodemailer.createTransport({
     host: config.host,
     port: config.port,
@@ -751,6 +762,31 @@ function createTransporter() {
   });
 }
 
+async function createVerifiedTransporter() {
+  if (!hasSmtpConfig()) return null;
+
+  let lastError;
+  for (const config of smtpConfigCandidates()) {
+    let transporter;
+    try {
+      await checkSmtpPort(config);
+      transporter = createTransporter(config);
+      await withTimeout(
+        transporter.verify(),
+        smtpTimeoutMs(),
+        'SMTP verification timed out before authentication completed.',
+      );
+      return { transporter, config };
+    } catch (error) {
+      transporter?.close();
+      lastError = error;
+      console.error(`SMTP verification failed for ${config.host}:${config.port}:`, explainSmtpError(error, config));
+    }
+  }
+
+  throw lastError || new Error('SMTP verification failed for every configured host.');
+}
+
 function withTimeout(promise, ms, message) {
   let timer;
   const timeout = new Promise((_, reject) => {
@@ -760,8 +796,7 @@ function withTimeout(promise, ms, message) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-function explainSmtpError(error) {
-  const config = smtpConfig();
+function explainSmtpError(error, config = smtpConfig()) {
   if (error?.code === 'EACCES') {
     return `Outbound SMTP is blocked by this machine or network for ${config.host}:${config.port}. Allow SMTP submission or deploy from a host that permits it.`;
   }
@@ -785,12 +820,11 @@ function explainSmtpError(error) {
   return error?.message || 'Email delivery failed for an unknown SMTP reason.';
 }
 
-function checkSmtpPort() {
+function checkSmtpPort(config = smtpConfig()) {
   if (!hasSmtpConfig()) {
     return Promise.reject(new Error('SMTP is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS to server/.env.'));
   }
 
-  const config = smtpConfig();
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({
       host: config.host,
@@ -1442,14 +1476,13 @@ function enrollmentStatusTemplate(order) {
 }
 
 async function sendOrderEmails(order) {
-  const transporter = createTransporter();
-  if (!transporter) {
+  const smtp = await createVerifiedTransporter();
+  if (!smtp?.transporter) {
     throw new Error('SMTP is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS to server/.env.');
   }
 
-  await checkSmtpPort();
-
-  const from = smtpConfig().from;
+  const { transporter, config } = smtp;
+  const from = config.from;
   const logoAttachments = emailLogoAttachments();
   try {
     const [studentEmail, adminEmail] = await withTimeout(
@@ -1475,8 +1508,8 @@ async function sendOrderEmails(order) {
     );
 
     const failures = [
-      studentEmail.status === 'rejected' ? `student: ${explainSmtpError(studentEmail.reason)}` : '',
-      adminEmail.status === 'rejected' ? `admin: ${explainSmtpError(adminEmail.reason)}` : '',
+      studentEmail.status === 'rejected' ? `student: ${explainSmtpError(studentEmail.reason, config)}` : '',
+      adminEmail.status === 'rejected' ? `admin: ${explainSmtpError(adminEmail.reason, config)}` : '',
     ].filter(Boolean);
 
     if (studentEmail.status === 'rejected' && adminEmail.status === 'rejected') {
@@ -1498,14 +1531,13 @@ async function sendOrderEmails(order) {
 }
 
 async function sendEnrollmentStatusEmail(order) {
-  const transporter = createTransporter();
-  if (!transporter) {
+  const smtp = await createVerifiedTransporter();
+  if (!smtp?.transporter) {
     throw new Error('SMTP is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS to server/.env.');
   }
 
-  await checkSmtpPort();
-
-  const from = smtpConfig().from;
+  const { transporter, config } = smtp;
+  const from = config.from;
   try {
     const info = await withTimeout(
       transporter.sendMail({
@@ -1543,18 +1575,12 @@ app.get('/api/email/status', emailStatusLimiter, async (_req, res) => {
   }
 
   try {
-    await checkSmtpPort();
-    const transporter = createTransporter();
+    const { transporter, config } = await createVerifiedTransporter();
     try {
-      await withTimeout(
-        transporter.verify(),
-        smtpTimeoutMs(),
-        'SMTP verification timed out before authentication completed.',
-      );
+      // createVerifiedTransporter already verified the connection.
     } finally {
       transporter?.close();
     }
-    const config = smtpConfig();
     res.json({
       configured: true,
       reachable: true,
