@@ -60,6 +60,18 @@ Start command: npm start
 Node.js version: 20.19 or newer
 ```
 
+For Hostinger GitHub deployments that show both static and Node fields, use:
+
+```text
+Build command: npm run build
+Output directory: dist
+Entry file: index.js
+```
+
+If `Entry file` is empty, Hostinger serves only the static React build. The website can load, but `/api/health`,
+`/api/orders`, and `/api/email/status` will return the React page instead of the Node API, so order storage and email
+delivery cannot work.
+
 After upload, run dependency install from Hostinger's Node.js panel if it does not happen automatically. The deployment `package.json` installs only runtime dependencies.
 
 ## Environment Variables

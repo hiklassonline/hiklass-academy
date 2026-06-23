@@ -876,6 +876,11 @@ function EnrollmentForm({ selectedCourses, selectedPackages, setSelectedCourses,
           paymentMethod: form.paymentMethod,
         }),
       });
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('The website backend is not running. Please contact HIKLASS Academy or use WhatsApp to submit this order.');
+      }
+
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
@@ -886,7 +891,7 @@ function EnrollmentForm({ selectedCourses, selectedPackages, setSelectedCourses,
         type: data.emailSent ? 'success' : 'warning',
         message: data.emailSent
           ? data.message || 'Your order was received.'
-          : 'Your order was saved, but email could not be sent from this server. Please use WhatsApp to follow up immediately.',
+          : data.message || 'Your order was saved, but email could not be sent from this server. Please use WhatsApp to follow up immediately.',
       });
       setForm({ ...initialForm, paymentMethod: '' });
       setSelectedCourses([]);
