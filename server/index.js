@@ -738,7 +738,6 @@ function smtpConfigCandidates() {
   const hosts = [
     'smtp.hostinger.com',
     config.host,
-    'smtp.titan.email',
   ].filter(Boolean);
   const uniqueHosts = [...new Set(hosts.map((host) => host.trim()).filter(Boolean))];
   const candidates = [];
@@ -898,7 +897,7 @@ function explainSmtpError(error, config = smtpConfig()) {
   }
 
   if (error?.code === 'EAUTH') {
-    return 'SMTP authentication failed. Check SMTP_USER and SMTP_PASS in server/.env.';
+    return `SMTP authentication failed for ${config.user || 'the configured user'} on ${config.host}:${config.port}. Check SMTP_USER and SMTP_PASS in the production environment variables.`;
   }
 
   return error?.message || 'Email delivery failed for an unknown SMTP reason.';
