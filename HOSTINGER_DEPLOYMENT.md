@@ -69,7 +69,7 @@ Entry file: index.js
 ```
 
 If `Entry file` is empty, Hostinger serves only the static React build. The website can load, but `/api/health`,
-`/api/orders`, and `/api/email/status` will return the React page instead of the Node API, so order storage and email
+`/api/enrollments`, and `/api/email/status` will return the React page instead of the Node API, so enrollment storage and email
 delivery cannot work.
 
 After upload, run dependency install from Hostinger's Node.js panel if it does not happen automatically. The deployment `package.json` installs only runtime dependencies.
@@ -112,6 +112,12 @@ https://hiklassacademy.com/api/email/status
 ```
 
 Then submit a test registration from the website. If `/api/email/status` reports SMTP trouble, the Node app is running and the remaining issue is the mail settings or outbound SMTP access.
+
+The live frontend should be built with:
+
+```env
+VITE_API_URL=https://hiklassacademy.com/api
+```
 
 ## Option B: Static public_html Upload
 

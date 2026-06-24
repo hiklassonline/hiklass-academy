@@ -159,7 +159,14 @@ function parseOrigins(value = '') {
     .filter(Boolean);
 }
 
-const defaultOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+const defaultOrigins = [
+  'https://hiklassacademy.com',
+  'https://www.hiklassacademy.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+];
 const allowedOrigins = [...new Set([...defaultOrigins, ...parseOrigins(process.env.CLIENT_URL)])];
 const localDevOriginPattern = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
 
@@ -498,14 +505,14 @@ async function createPendingPaymentForOrder(order) {
 
 async function validateOrder(body) {
   const order = {
-    name: cleanText(body.name, 90),
+    name: cleanText(body.name || body.studentName, 90),
     phone: cleanText(body.phone, 40),
     email: cleanText(body.email, 120).toLowerCase(),
-    mode: cleanText(body.mode, 30),
+    mode: cleanText(body.mode || body.learningMode, 30),
     notes: cleanText(body.notes || body.message, 700),
     paymentMethod: cleanText(body.paymentMethod, 30),
-    courses: normalizeCourses(body.courses),
-    packages: normalizePackages(body.packages),
+    courses: normalizeCourses(body.courses || body.selectedCourses),
+    packages: normalizePackages(body.packages || body.selectedPackages),
   };
   const pricing = await calculateDiscount(body.discountCode, order.courses, order.packages);
   order.subtotal = pricing.subtotal;
@@ -1644,7 +1651,10 @@ async function sendEnrollmentStatusEmail(order) {
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'HIKLASS Holiday Courses API' });
+  res.json({
+    success: true,
+    message: 'HIKLASS Academy backend is running',
+  });
 });
 
 app.get('/api/email/status', emailStatusLimiter, async (_req, res) => {
@@ -2808,7 +2818,11 @@ async function handleOrder(req, res) {
   }
 }
 
+app.post('/api/enrollments', orderLimiter, handleOrder);
 app.post('/api/orders', orderLimiter, handleOrder);
+app.post('/api/course-orders', orderLimiter, handleOrder);
+app.post('/api/api/enrollments', orderLimiter, handleOrder);
+app.post('/enrollments', orderLimiter, handleOrder);
 app.post('/api/enquiries', orderLimiter, handleOrder);
 
 // ---- Admin profile / avatar routes ----
@@ -2922,3 +2936,4 @@ export {
   adminTemplate,
   enrollmentStatusTemplate,
 };
+

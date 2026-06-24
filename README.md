@@ -38,18 +38,18 @@ npm run preview --prefix client
 Frontend env files:
 
 ```env
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000/api
 VITE_SMARTSUPP_KEY=your_smartsupp_key
 ```
 
 `client/.env.production` currently contains the requested Hostinger example:
 
 ```env
-VITE_API_URL=https://hiklassacademy.com
+VITE_API_URL=https://hiklassacademy.com/api
 VITE_SMARTSUPP_KEY=your_smartsupp_key
 ```
 
-If the Node backend serves the frontend from the same subdomain, set `VITE_API_URL` to the same origin API host or leave it empty before building.
+If the Node backend serves the frontend from the same subdomain, set `VITE_API_URL` to the API root ending in `/api`.
 
 ## Backend Setup
 
@@ -88,6 +88,13 @@ Health checks:
 ```text
 http://localhost:5000/api/health
 http://localhost:5000/api/email/status
+```
+
+Enrollment submissions use:
+
+```text
+POST http://localhost:5000/api/enrollments
+POST https://hiklassacademy.com/api/enrollments
 ```
 
 ## Root Commands
@@ -193,7 +200,7 @@ After deployment, open `/api/email/status`. If it reports an outbound SMTP timeo
 
 ## Troubleshooting
 
-- Frontend cannot submit: confirm `VITE_API_URL` points to the deployed backend and CORS `CLIENT_URL` matches the frontend origin.
+- Frontend cannot submit: confirm `VITE_API_URL` points to the deployed API root, for example `https://hiklassacademy.com/api`, and CORS `CLIENT_URL` matches the frontend origin.
 - Admin redirects to login: sign in at `/admin/login` with `ADMIN_LOGIN_EMAIL` and `ADMIN_PASSWORD`.
 - Email fails but order saves: verify `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, and `SMTP_PASS`.
 - React route refresh returns 404: confirm `.htaccess` was uploaded with `client/dist`.

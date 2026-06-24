@@ -70,6 +70,7 @@ import PaymentMethodSelector from './components/PaymentMethodSelector';
 import SmartsuppChat from './components/SmartsuppChat';
 import AdminLogin from './pages/admin/AdminLogin';
 import { paymentMethodOptions } from './data/paymentMethods';
+import { submitEnrollment } from './services/api';
 import { ADMIN_TOKEN_KEY, getStoredAdminToken } from './services/authService';
 import API_URL from './utils/apiBaseUrl';
 import './styles.css';
@@ -862,30 +863,20 @@ function EnrollmentForm({ selectedCourses, selectedPackages, setSelectedCourses,
     setStatus({ type: 'info', message: 'Sending your course order...' });
 
     try {
-      const response = await fetch(`${API_URL}/api/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          courses: selectedCourseNames,
-          packages: selectedPackages.map(({ id, name }) => ({ id, name })),
-          discountCode: appliedDiscount?.code || '',
-          discountAmount,
-          subtotal,
-          grandTotal,
-          paymentMethod: form.paymentMethod,
-        }),
+      const data = await submitEnrollment({
+        ...form,
+        studentName: form.name,
+        learningMode: form.mode,
+        courses: selectedCourseNames,
+        selectedCourses: selectedCourses.map(({ title, price }) => ({ title, price })),
+        packages: selectedPackages.map(({ id, name }) => ({ id, name })),
+        selectedPackages: selectedPackages.map(({ id, name, price, duration, courses }) => ({ id, name, price, duration, courses })),
+        discountCode: appliedDiscount?.code || '',
+        discountAmount,
+        subtotal,
+        grandTotal,
+        paymentMethod: form.paymentMethod,
       });
-      const contentType = response.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        throw new Error('The website backend is not running. Please contact HIKLASS Academy or use WhatsApp to submit this order.');
-      }
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(data.message || 'The order could not be submitted.');
-      }
 
       setStatus({
         type: data.emailSent ? 'success' : 'warning',
