@@ -27,7 +27,7 @@ let ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'HIKLASS Academy';
 const ORDER_EMAIL_SENT_MESSAGE = 'Your order was saved successfully. An automated confirmation email has been sent to your email address.';
-const ORDER_EMAIL_FAILED_MESSAGE = 'Your order was saved successfully, but the automated confirmation email could not be sent.';
+const ORDER_PUBLIC_SUCCESS_MESSAGE = 'Your order was saved successfully. HIKLASS Academy will contact you shortly.';
 const ORDER_EMAIL_INTRO = 'This automated email confirms that your order was saved successfully. Please keep this message for your records.';
 const EMAIL_LOGO_SVG_CID = 'hiklass-logo-horizontal-svg';
 const EMAIL_LOGO_PNG_CID = 'hiklass-email-logo-png';
@@ -2804,7 +2804,7 @@ async function handleOrder(req, res) {
     const emailError = explainSmtpError(error, error.smtpLastConfig);
     console.error('Email delivery failed:', emailError, error.smtpAttempts || []);
     res.status(202).json({
-      message: `${ORDER_EMAIL_FAILED_MESSAGE} ${emailError}`,
+      message: ORDER_PUBLIC_SUCCESS_MESSAGE,
       orderId: savedOrder.id,
       totalAmount: savedOrder.totalAmount,
       subtotal: savedOrder.subtotal,
@@ -2812,8 +2812,6 @@ async function handleOrder(req, res) {
       discountAmount: savedOrder.discountAmount,
       grandTotal: savedOrder.grandTotal,
       emailSent: false,
-      emailError,
-      emailAttempts: error.smtpAttempts || [],
     });
   }
 }
