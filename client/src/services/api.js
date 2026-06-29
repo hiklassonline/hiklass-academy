@@ -9,13 +9,18 @@ function apiBaseUrl() {
 const API_BASE_URL = apiBaseUrl();
 
 export async function submitEnrollment(payload) {
-  const response = await fetch(`${API_BASE_URL}/enrollments`, {
+  const response = await fetch(`${API_BASE_URL}/orders`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   });
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('The enrollment API is not returning JSON. Please check the backend deployment.');
+  }
 
   const data = await response.json().catch(() => ({}));
 
