@@ -608,6 +608,26 @@ async function writeJsonFile(key, data) {
   await fsp.rename(tempFile, filePath);
 }
 
+async function recordEmailDelivery({ id, recipient, subject, status, errorMessage = '' }) {
+  try {
+    const logs = await readJsonFile('email-logs');
+    const entry = {
+      id: id || `email-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      recipient: cleanText(recipient, 180),
+      subject: cleanText(subject, 240),
+      status,
+      date: new Date().toISOString(),
+      errorMessage: cleanText(errorMessage, 500),
+    };
+    const existingIndex = logs.findIndex((log) => log.id === entry.id);
+    if (existingIndex >= 0) logs[existingIndex] = entry;
+    else logs.unshift(entry);
+    await writeJsonFile('email-logs', logs.slice(0, 500));
+  } catch (error) {
+    console.error('Email delivery log failed:', error);
+  }
+}
+
 function createAdminId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -1598,31 +1618,64 @@ function enrollmentStatusPlainText(order) {
 
 async function sendOrderEmails(order) {
   const logoAttachments = emailLogoAttachments();
-  const studentEmail = await sendMailWithSmtpCandidates({
-    to: order.email,
-    subject: 'Enrollment Request Received',
-    text: orderPlainText(order),
-    html: studentTemplate(order),
-    attachments: logoAttachments,
-  }, 'student confirmation email');
+  const studentSubject = 'Enrollment Request Received';
+  let studentEmail;
+  try {
+    studentEmail = await sendMailWithSmtpCandidates({
+      to: order.email,
+      subject: studentSubject,
+      text: orderPlainText(order),
+      html: studentTemplate(order),
+      attachments: logoAttachments,
+    }, 'student confirmation email');
+    await recordEmailDelivery({
+      id: `${order.id}-student`,
+      recipient: order.email,
+      subject: studentSubject,
+      status: 'Sent',
+    });
+  } catch (error) {
+    await recordEmailDelivery({
+      id: `${order.id}-student`,
+      recipient: order.email,
+      subject: studentSubject,
+      status: 'Failed',
+      errorMessage: explainSmtpError(error, error.smtpLastConfig),
+    });
+    throw error;
+  }
 
   let adminEmailSent = false;
   const warnings = [];
+  const adminSubject = `New Course Enrollment Request from ${order.name}`;
 
   try {
     await sendMailWithSmtpCandidates({
       to: ADMIN_EMAIL,
       replyTo: order.email,
-      subject: `New Course Enrollment Request from ${order.name}`,
+      subject: adminSubject,
       text: orderPlainText(order, 'New Course Enrollment Request'),
       html: adminTemplate(order),
       attachments: logoAttachments,
     }, 'admin notification email');
     adminEmailSent = true;
+    await recordEmailDelivery({
+      id: `${order.id}-admin`,
+      recipient: ADMIN_EMAIL,
+      subject: adminSubject,
+      status: 'Sent',
+    });
   } catch (error) {
     const warning = `admin: ${explainSmtpError(error, error.smtpLastConfig)}`;
     warnings.push(warning);
     console.warn('Partial email delivery failure:', warning);
+    await recordEmailDelivery({
+      id: `${order.id}-admin`,
+      recipient: ADMIN_EMAIL,
+      subject: adminSubject,
+      status: 'Failed',
+      errorMessage: explainSmtpError(error, error.smtpLastConfig),
+    });
   }
 
   return {
@@ -2115,6 +2168,7 @@ app.get('/api/admin/messages', requireAdmin, async (_req, res) => {
 
 app.get('/api/admin/email-logs', requireAdmin, async (_req, res) => {
   const [orders, storedLogs] = await Promise.all([readOrders(), readJsonFile('email-logs')]);
+  const storedIds = new Set(storedLogs.map((log) => log.id));
   res.json({
     logs: [
       ...storedLogs,
@@ -2138,7 +2192,8 @@ app.get('/api/admin/email-logs', requireAdmin, async (_req, res) => {
           date: order.createdAt,
           errorMessage: order.emailError || '',
         },
-      ]),
+      ])
+      .filter((log) => !storedIds.has(log.id)),
     ],
   });
 });

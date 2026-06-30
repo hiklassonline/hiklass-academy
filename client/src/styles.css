@@ -570,6 +570,8 @@
 .statusBadge.completed { background: #CCFBF1; color: #0F766E; }
 .statusBadge.cancelled { background: #FEE2E2; color: #D30D1A; }
 .statusBadge.refunded { background: #F3F4F6; color: #4B5563; }
+.statusBadge.sent { background: #DCFCE7; color: #1B5E20; }
+.statusBadge.failed { background: #FEE2E2; color: #D30D1A; }
 
 .adminRowActions {
   display: flex;
