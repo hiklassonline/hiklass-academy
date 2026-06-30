@@ -71,7 +71,7 @@ import SmartsuppChat from './components/SmartsuppChat';
 import AdminLogin from './pages/admin/AdminLogin';
 import { paymentMethodOptions } from './data/paymentMethods';
 import { submitEnrollment } from './services/api';
-import { ADMIN_TOKEN_KEY, getStoredAdminToken } from './services/authService';
+import { ADMIN_TOKEN_KEY, clearAdminSession, getStoredAdminToken } from './services/authService';
 import API_URL from './utils/apiBaseUrl';
 import './styles.css';
 
@@ -1184,6 +1184,12 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(`${API_URL}${path}`, opts);
     const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAdminSession();
+      setToken('');
+      window.location.replace('/admin/login');
+      throw new Error('Your admin session expired. Please sign in again.');
+    }
     if (!res.ok) throw new Error(data.message || 'Request failed');
     return data;
   }
