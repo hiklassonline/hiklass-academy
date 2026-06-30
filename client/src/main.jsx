@@ -1704,16 +1704,16 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
       title = mode === 'add' ? 'Add Discount' : 'Edit Discount';
       endpoint = mode === 'add' ? '/api/admin/discounts' : `/api/admin/discounts/${data.id}`;
       fields = [
-        { key: 'code', label: 'Discount Code', type: 'text' },
-        { key: 'type', label: 'Type (percentage or fixed)', type: 'text' },
-        { key: 'value', label: 'Value', type: 'number' },
-        { key: 'appliesTo', label: 'Applies To (courses, packages, all)', type: 'text' },
-        { key: 'minOrderAmount', label: 'Minimum Order Amount', type: 'number' },
-        { key: 'startDate', label: 'Start Date (YYYY-MM-DD)', type: 'text' },
-        { key: 'endDate', label: 'End Date (YYYY-MM-DD)', type: 'text' },
-        { key: 'usageLimit', label: 'Usage Limit', type: 'number' },
-        { key: 'usedCount', label: 'Used Count', type: 'number' },
-        { key: 'status', label: 'Status (Active or Inactive)', type: 'text' },
+        { key: 'code', label: 'Discount Code', type: 'text', required: true },
+        { key: 'type', label: 'Type', type: 'select', defaultValue: 'percentage', options: ['percentage', 'fixed'] },
+        { key: 'value', label: 'Value', type: 'number', required: true, min: 1 },
+        { key: 'appliesTo', label: 'Applies To', type: 'select', defaultValue: 'all', options: ['all', 'courses', 'packages'] },
+        { key: 'minOrderAmount', label: 'Minimum Order Amount', type: 'number', defaultValue: 0, min: 0 },
+        { key: 'startDate', label: 'Start Date', type: 'date' },
+        { key: 'endDate', label: 'End Date', type: 'date' },
+        { key: 'usageLimit', label: 'Usage Limit (0 = unlimited)', type: 'number', defaultValue: 0, min: 0 },
+        { key: 'usedCount', label: 'Used Count', type: 'number', defaultValue: 0, min: 0 },
+        { key: 'status', label: 'Status', type: 'select', defaultValue: 'Active', options: ['Active', 'Inactive'] },
       ];
     } else if (page === 'instructors') {
       title = mode === 'add' ? 'Add Instructor' : 'Edit Instructor';
@@ -1788,8 +1788,24 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
                 <span>{f.label}</span>
                 {f.type === 'textarea' ? (
                   <textarea name={f.key} defaultValue={data?.[f.key] || ''} rows={3} style={inputStyle} />
+                ) : f.type === 'select' ? (
+                  <select
+                    name={f.key}
+                    defaultValue={data?.[f.key] ?? f.defaultValue ?? ''}
+                    required={f.required}
+                    style={inputStyle}
+                  >
+                    {f.options.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
                 ) : (
-                  <input name={f.key} type={f.type} defaultValue={Array.isArray(data?.[f.key]) ? data[f.key].join(', ') : data?.[f.key] ?? ''} style={inputStyle} />
+                  <input
+                    name={f.key}
+                    type={f.type}
+                    defaultValue={Array.isArray(data?.[f.key]) ? data[f.key].join(', ') : data?.[f.key] ?? f.defaultValue ?? ''}
+                    min={f.min}
+                    required={f.required}
+                    style={inputStyle}
+                  />
                 )}
               </label>
             ))}
