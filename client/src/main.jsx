@@ -1956,17 +1956,18 @@ function EmailLogsPage({ logs }) {
       <div className="adminPanelTitle"><h2>Email Logs</h2></div>
       <div className="adminTableWrap">
         <table className="adminDataTable">
-          <thead><tr><th>Recipient</th><th>Subject</th><th>Status</th><th>Date</th></tr></thead>
+          <thead><tr><th>Recipient</th><th>Subject</th><th>Status</th><th>Details</th><th>Date</th></tr></thead>
           <tbody>
             {logs.length ? logs.map((log) => (
               <tr key={log.id}>
                 <td>{log.recipient}</td>
                 <td>{log.subject}</td>
                 <td><span className={`statusBadge ${(log.status || '').toLowerCase()}`}>{log.status || 'Sent'}</span></td>
+                <td>{log.errorMessage || 'Delivered successfully'}</td>
                 <td>{formatDate(log.date)}</td>
               </tr>
             )) : (
-              <tr><td colSpan={4}><div className="emptyAdminState compact"><h3>No email logs</h3></div></td></tr>
+              <tr><td colSpan={5}><div className="emptyAdminState compact"><h3>No email attempts recorded yet</h3></div></td></tr>
             )}
           </tbody>
         </table>
