@@ -879,7 +879,7 @@ function EnrollmentForm({ selectedCourses, selectedPackages, setSelectedCourses,
       });
 
       setStatus({
-        type: 'success',
+        type: data.emailSent === false ? 'warning' : 'success',
         message: data.message || 'Your order was received successfully. HIKLASS Academy will contact you shortly.',
       });
       setForm({ ...initialForm, paymentMethod: '' });
