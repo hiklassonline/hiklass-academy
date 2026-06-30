@@ -878,8 +878,19 @@ function EnrollmentForm({ selectedCourses, selectedPackages, setSelectedCourses,
         paymentMethod: form.paymentMethod,
       });
 
+      if (data.emailSent === false) {
+        setStatus({
+          type: 'warning',
+          message: `${data.message || 'Your order was saved, but the confirmation email was not sent.'} Redirecting you to WhatsApp with your order details...`,
+        });
+        window.setTimeout(() => {
+          window.location.assign(`https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappText}`);
+        }, 1200);
+        return;
+      }
+
       setStatus({
-        type: data.emailSent === false ? 'warning' : 'success',
+        type: 'success',
         message: data.message || 'Your order was received successfully. HIKLASS Academy will contact you shortly.',
       });
       setForm({ ...initialForm, paymentMethod: '' });
