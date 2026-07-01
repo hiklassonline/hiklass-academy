@@ -961,7 +961,9 @@ function EnrollmentForm({ selectedCourses, selectedPackages, setSelectedCourses,
             {discountStatus.message ? <p className={discountStatus.type}>{discountStatus.message}</p> : null}
             {appliedDiscount ? (
               <button type="button" className="removeDiscountButton" onClick={removeDiscount}>
-                Remove {appliedDiscount.code}
+                {appliedDiscount.type === 'percentage'
+                  ? `${appliedDiscount.value}%`
+                  : formatPrice(appliedDiscount.value)} Discount — Remove
               </button>
             ) : null}
           </div>
