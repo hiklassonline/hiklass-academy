@@ -12,13 +12,13 @@ import net from 'net';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
-dotenv.config();
-
-const app = express();
-const PORT = Number(process.env.PORT || 5000);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ENV_FILE = path.join(__dirname, '.env');
+dotenv.config({ path: ENV_FILE });
+
+const app = express();
+const PORT = Number(process.env.PORT || 5000);
 const DATA_DIR = path.join(__dirname, '..', 'storage');
 const ORDERS_FILE = path.join(DATA_DIR, 'course-orders.json');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'info@hiklassacademy.com';
@@ -743,12 +743,25 @@ function envValue(...keys) {
   return String(value).trim().replace(/^(['"])(.*)\1$/, '$2');
 }
 
+function smtpPassword() {
+  const encodedPassword = envValue('SMTP_PASS_BASE64');
+  if (encodedPassword) {
+    try {
+      const decodedPassword = Buffer.from(encodedPassword, 'base64').toString('utf8');
+      if (decodedPassword) return decodedPassword;
+    } catch (error) {
+      console.error('SMTP_PASS_BASE64 could not be decoded:', error?.message || error);
+    }
+  }
+  return envValue('SMTP_PASS', 'SMTP_PASSWORD', 'MAIL_PASS', 'MAIL_PASSWORD', 'EMAIL_PASS', 'EMAIL_PASSWORD');
+}
+
 function smtpConfig(overrides = {}) {
   const host = envValue('SMTP_HOST', 'MAIL_HOST', 'EMAIL_HOST') || 'smtp.hostinger.com';
   const port = Number(envValue('SMTP_PORT', 'MAIL_PORT') || 465);
   const secureValue = envValue('SMTP_SECURE', 'MAIL_SECURE') || 'true';
   const user = envValue('SMTP_USER', 'SMTP_USERNAME', 'MAIL_USER', 'MAIL_USERNAME', 'EMAIL_USER');
-  const pass = envValue('SMTP_PASS', 'SMTP_PASSWORD', 'MAIL_PASS', 'MAIL_PASSWORD', 'EMAIL_PASS', 'EMAIL_PASSWORD');
+  const pass = smtpPassword();
   return {
     host: overrides.host || host,
     port: overrides.port || port,
