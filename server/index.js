@@ -740,18 +740,22 @@ function smtpTimeoutMs() {
 
 function envValue(...keys) {
   const value = keys.map((key) => process.env[key]).find((item) => item);
+  if (value === undefined || value === null) return '';
   return String(value).trim().replace(/^(['"])(.*)\1$/, '$2');
 }
 
 function smtpPassword() {
   const encodedPassword = envValue('SMTP_PASS_BASE64');
-  if (encodedPassword) {
+  const validBase64 = /^[A-Za-z0-9+/]+={0,2}$/.test(encodedPassword) && encodedPassword.length % 4 === 0;
+  if (validBase64) {
     try {
       const decodedPassword = Buffer.from(encodedPassword, 'base64').toString('utf8');
       if (decodedPassword) return decodedPassword;
     } catch (error) {
       console.error('SMTP_PASS_BASE64 could not be decoded:', error?.message || error);
     }
+  } else if (encodedPassword) {
+    console.error('SMTP_PASS_BASE64 is not valid Base64. Falling back to SMTP_PASS.');
   }
   return envValue('SMTP_PASS', 'SMTP_PASSWORD', 'MAIL_PASS', 'MAIL_PASSWORD', 'EMAIL_PASS', 'EMAIL_PASSWORD');
 }
