@@ -19,7 +19,9 @@ dotenv.config({ path: ENV_FILE });
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
-const DATA_DIR = path.join(__dirname, '..', 'storage');
+const DATA_DIR = path.isAbsolute(process.env.DATA_DIR || '')
+  ? process.env.DATA_DIR
+  : path.join(__dirname, '..', process.env.DATA_DIR || 'storage');
 const ORDERS_FILE = path.join(DATA_DIR, 'course-orders.json');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'info@hiklassacademy.com';
 const ADMIN_LOGIN_EMAIL = process.env.ADMIN_LOGIN_EMAIL || ADMIN_EMAIL || 'admin@hiklassacademy.com';
