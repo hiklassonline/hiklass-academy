@@ -1,0 +1,168 @@
+.studentDashboardPage {
+  min-height: 100vh;
+  background: #F8FAFC;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.studentDashboardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px clamp(20px, 5vw, 64px);
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.studentDashboardBrand img {
+  height: 34px;
+}
+
+.studentDashboardLogout {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  color: #111827;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background 150ms ease;
+}
+
+.studentDashboardLogout:hover {
+  background: #F3F4F6;
+}
+
+.studentDashboardBody {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: clamp(28px, 6vw, 56px) 20px;
+}
+
+.studentDashboardBody h1 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 700;
+}
+
+.studentDashboardSubtitle {
+  margin: 0 0 32px;
+  color: #6B7280;
+  font-size: 1.02rem;
+}
+
+.studentDashboardState {
+  padding: 20px;
+  color: #6B7280;
+  text-align: center;
+}
+
+.studentDashboardError {
+  color: #D30D1A;
+}
+
+.studentDashboardEmpty {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 56px 24px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  color: #6B7280;
+  text-align: center;
+}
+
+.studentDashboardEmpty svg {
+  color: #1E2F97;
+}
+
+.studentDashboardEmpty h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.3rem;
+}
+
+.studentDashboardCta {
+  margin-top: 12px;
+  padding: 12px 24px;
+  background: #D30D1A;
+  border-radius: 8px;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.studentDashboardList {
+  display: grid;
+  gap: 16px;
+}
+
+.studentDashboardCard {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 18px;
+  align-items: center;
+  padding: 20px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 14px;
+}
+
+.studentDashboardCardIcon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  background: #EEF4FF;
+  border-radius: 50%;
+  color: #1E2F97;
+}
+
+.studentDashboardCardBody h3 {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.studentDashboardCardBody p {
+  margin: 0;
+  color: #6B7280;
+  font-size: 0.92rem;
+}
+
+.studentDashboardCardMeta {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  text-align: right;
+}
+
+.studentDashboardAmount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.studentDashboardPaymentMethod {
+  color: #6B7280;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .studentDashboardCard {
+    grid-template-columns: 40px 1fr;
+  }
+
+  .studentDashboardCardMeta {
+    grid-column: 1 / -1;
+    justify-items: start;
+    text-align: left;
+  }
+}

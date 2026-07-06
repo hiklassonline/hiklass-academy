@@ -96,6 +96,9 @@ JWT_SECRET=replace-with-a-long-random-jwt-secret
 ADMIN_TOKEN=replace-with-a-long-random-admin-token
 ADMIN_PASSWORD=replace-with-a-strong-admin-password
 UPLOAD_DIR=uploads
+# Optional: store persisted JSON data outside the deployed app folder so
+# redeploys don't wipe orders/enrollments/students. Absolute path recommended.
+DATA_DIR=/home/your-hostinger-username/hiklass-data
 SMARTSUPP_KEY=replace-with-your-smartsupp-key
 WHATSAPP_PRIMARY=237651251941
 ```

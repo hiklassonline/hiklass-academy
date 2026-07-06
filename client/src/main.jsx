@@ -69,9 +69,13 @@ import PaymentDetailsPanel from './components/PaymentDetailsPanel';
 import PaymentMethodSelector from './components/PaymentMethodSelector';
 import SmartsuppChat from './components/SmartsuppChat';
 import AdminLogin from './pages/admin/AdminLogin';
+import StudentLogin from './pages/student/StudentLogin';
+import StudentRegister from './pages/student/StudentRegister';
+import StudentDashboard from './pages/student/StudentDashboard';
 import { paymentMethodOptions } from './data/paymentMethods';
 import { submitEnrollment } from './services/api';
 import { ADMIN_TOKEN_KEY, clearAdminSession, getStoredAdminToken } from './services/authService';
+import { getStoredStudentToken } from './services/studentAuthService';
 import API_URL from './utils/apiBaseUrl';
 import './styles.css';
 
@@ -513,6 +517,12 @@ function Header() {
             {label}
           </a>
         ))}
+        <a href="/student/login" onClick={() => setOpen(false)}>
+          Student Login
+        </a>
+        <a href="/student/register" onClick={() => setOpen(false)}>
+          Student Sign Up
+        </a>
       </nav>
 
       <a className="enroll-btn" href="#enroll">
@@ -1179,7 +1189,6 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
   const topCourses = useMemo(() => topCourseRows(stats), [stats]);
   const statusData = useMemo(() => buildStatusData(stats, stats?.totalOrders || orders.length), [orders.length, stats]);
   const recentOrders = useMemo(() => filteredOrders.slice(0, 6), [filteredOrders]);
-  const totalStudents = useMemo(() => new Set(orders.map((o) => o.email || o.phone || o.name)).size, [orders]);
 
   async function api(method, path, body) {
     const opts = { method, headers: { 'Content-Type': 'application/json', 'x-admin-token': token } };
@@ -1363,7 +1372,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
   const statCards = [
     { label: 'Total Enrollments', value: stats?.totalOrders ?? orders.length, growth: '18.6%', icon: GraduationCap, tone: 'blue' },
     { label: 'Total Revenue (FCFA)', value: Number(stats?.totalAmount || 0).toLocaleString('en-US'), growth: '24.3%', icon: WalletCards, tone: 'green' },
-    { label: 'Total Students', value: totalStudents || 95, growth: '16.7%', icon: Users, tone: 'purple' },
+    { label: 'Total Students', value: students.length, growth: '16.7%', icon: Users, tone: 'purple' },
     { label: 'Total Courses', value: courses.length, growth: '9.1%', icon: BookOpen, tone: 'orange' },
   ];
 
@@ -2258,6 +2267,9 @@ function App() {
   const adminPath = window.location.pathname.replace(/\/$/, '') || '/';
   const isAdminLoginRoute = adminPath === '/admin/login';
   const isAdminDashboardRoute = adminPath === '/admin' || adminPath.startsWith('/admin/');
+  const isStudentLoginRoute = adminPath === '/student/login';
+  const isStudentRegisterRoute = adminPath === '/student/register';
+  const isStudentDashboardRoute = adminPath === '/student' || adminPath === '/student/dashboard';
   const selectedCount = selectedCourses.length + selectedPackages.length;
 
   React.useEffect(() => {
@@ -2283,6 +2295,7 @@ function App() {
   }
 
   const isAdminRoute = adminPath.startsWith('/admin');
+  const isStudentRoute = adminPath.startsWith('/student');
 
   if (isAdminLoginRoute) {
     if (getStoredAdminToken()) {
@@ -2301,6 +2314,33 @@ function App() {
       window.history.replaceState(null, '', '/admin/dashboard');
     }
     return <AdminDashboard initialPage={getAdminPageFromPath()} />;
+  }
+
+  if (isStudentLoginRoute) {
+    if (getStoredStudentToken()) {
+      window.history.replaceState(null, '', '/student/dashboard');
+      return <StudentDashboard />;
+    }
+    return <StudentLogin />;
+  }
+
+  if (isStudentRegisterRoute) {
+    if (getStoredStudentToken()) {
+      window.history.replaceState(null, '', '/student/dashboard');
+      return <StudentDashboard />;
+    }
+    return <StudentRegister />;
+  }
+
+  if (isStudentDashboardRoute) {
+    if (!getStoredStudentToken()) {
+      window.history.replaceState(null, '', '/student/login');
+      return <StudentLogin />;
+    }
+    if (adminPath === '/student') {
+      window.history.replaceState(null, '', '/student/dashboard');
+    }
+    return <StudentDashboard />;
   }
 
   return (
@@ -2323,7 +2363,7 @@ function App() {
         <Contact />
       </main>
       <FloatingEnrollButton selectedCount={selectedCount} pulse={!hasSeenFloatingEnroll} />
-      <SmartsuppChat enabled={!isAdminRoute} />
+      <SmartsuppChat enabled={!isAdminRoute && !isStudentRoute} />
     </>
   );
 }

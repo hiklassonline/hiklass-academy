@@ -1,0 +1,335 @@
+.studentAuthPage {
+  display: grid;
+  grid-template-columns: 45% 55%;
+  min-height: 100vh;
+  background: #FFFFFF;
+  color: #111827;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.studentAuthBrandPanel {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1E2F97, #07162F);
+  color: #FFFFFF;
+}
+
+.studentAuthBrandPanel::before,
+.studentAuthBrandPanel::after {
+  position: absolute;
+  content: "";
+  border: 2px dashed rgba(37, 84, 165, 0.7);
+  border-radius: 50%;
+}
+
+.studentAuthBrandPanel::before {
+  right: -128px;
+  top: 37%;
+  width: 260px;
+  height: 260px;
+}
+
+.studentAuthBrandPanel::after {
+  left: -78px;
+  bottom: 19%;
+  width: 150px;
+  height: 150px;
+  opacity: 0.35;
+}
+
+.studentAuthBrandContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: clamp(42px, 7vw, 128px) clamp(28px, 5vw, 58px) 42px;
+}
+
+.studentAuthLogo {
+  width: min(84%, 420px);
+  height: auto;
+}
+
+.studentAuthIntro {
+  max-width: 430px;
+  margin-top: clamp(46px, 8vh, 76px);
+}
+
+.studentAuthIntro h1 {
+  margin: 0;
+  color: #FFFFFF;
+  font-size: clamp(2.15rem, 3.7vw, 3.15rem);
+  font-weight: 700;
+  line-height: 1.22;
+}
+
+.studentAuthIntro span {
+  display: block;
+  width: 72px;
+  height: 3px;
+  margin: 22px 0 24px;
+  background: #D30D1A;
+}
+
+.studentAuthIntro p {
+  max-width: 390px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.15rem;
+  line-height: 1.55;
+}
+
+.studentAuthSecurity {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: auto;
+  color: #FFFFFF;
+}
+
+.studentAuthSecurity svg {
+  flex: 0 0 auto;
+  color: #FFFFFF;
+}
+
+.studentAuthSecurity strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.studentAuthSecurity p {
+  margin: 5px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.55;
+}
+
+.studentAuthFormPanel {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  min-height: 100vh;
+  padding: 42px;
+  background: #FFFFFF;
+}
+
+.studentAuthCard {
+  width: min(100%, 520px);
+  padding: 48px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+}
+
+.studentAuthLock {
+  display: grid;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 28px;
+  place-items: center;
+  background: #EEF4FF;
+  border-radius: 50%;
+  color: #1E2F97;
+}
+
+.studentAuthCard h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.studentAuthCard > p {
+  margin: 14px 0 34px;
+  color: #6B7280;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.studentAuthField {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 22px;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.studentAuthField > div {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  min-height: 64px;
+  padding: 0 18px;
+  border: 1px solid #D1D5DB;
+  border-radius: 10px;
+  color: #6B7280;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.studentAuthField > div:focus-within {
+  border-color: #1E2F97;
+  box-shadow: 0 0 0 4px rgba(30, 47, 151, 0.15);
+  transform: translateY(-1px);
+}
+
+.studentAuthField > div.invalid {
+  border-color: #D30D1A;
+}
+
+.studentAuthField input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  color: #111827;
+  font-size: 1rem;
+  outline: 0;
+}
+
+.studentAuthField input::placeholder {
+  color: #6B7280;
+}
+
+.studentAuthField button {
+  display: grid;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: #6B7280;
+  cursor: pointer;
+  place-items: center;
+}
+
+.studentAuthField small,
+.studentAuthError {
+  color: #D30D1A;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.studentAuthOptions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 0 28px;
+}
+
+.studentAuthOptions a {
+  color: #1E2F97;
+  font-weight: 700;
+  transition: color 180ms ease;
+}
+
+.studentAuthOptions a:hover {
+  color: #D30D1A;
+}
+
+.studentAuthError {
+  margin: -10px 0 18px;
+  padding: 12px 14px;
+  background: rgba(211, 13, 26, 0.08);
+  border-radius: 10px;
+}
+
+.studentAuthSubmit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 56px;
+  background: #D30D1A;
+  border: 0;
+  border-radius: 10px;
+  color: #FFFFFF;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.studentAuthSubmit:hover {
+  background: #A00000;
+  box-shadow: 0 15px 30px rgba(160, 0, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+.studentAuthSubmit:active {
+  background: #7A0000;
+}
+
+.studentAuthSubmit:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
+}
+
+.studentAuthFormPanel footer {
+  margin-top: 30px;
+  color: #6B7280;
+  font-size: 0.98rem;
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .studentAuthPage {
+    grid-template-columns: 1fr;
+  }
+
+  .studentAuthBrandPanel {
+    min-height: auto;
+  }
+
+  .studentAuthBrandContent {
+    min-height: auto;
+    padding: 32px 24px;
+  }
+
+  .studentAuthLogo {
+    width: min(70%, 320px);
+  }
+
+  .studentAuthIntro {
+    margin-top: 26px;
+  }
+
+  .studentAuthIntro h1 {
+    font-size: 2rem;
+  }
+
+  .studentAuthSecurity {
+    margin-top: 26px;
+  }
+
+  .studentAuthFormPanel {
+    min-height: auto;
+    padding: 34px 18px 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  .studentAuthBrandContent {
+    padding: 26px 18px;
+  }
+
+  .studentAuthCard {
+    padding: 30px 18px;
+    border-radius: 18px;
+  }
+
+  .studentAuthLock {
+    width: 72px;
+    height: 72px;
+  }
+
+  .studentAuthOptions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

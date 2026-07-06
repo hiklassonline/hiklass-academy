@@ -6,6 +6,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import nodemailer from 'nodemailer';
 import multer from 'multer';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import fsp from 'fs/promises';
 import net from 'net';
@@ -27,6 +29,11 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'info@hiklassacademy.com';
 const ADMIN_LOGIN_EMAIL = process.env.ADMIN_LOGIN_EMAIL || ADMIN_EMAIL || 'admin@hiklassacademy.com';
 let ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-only-insecure-student-jwt-secret');
+if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
+  console.warn('JWT_SECRET is not set; using an insecure development fallback. Set JWT_SECRET in server/.env before deploying.');
+}
+const STUDENT_TOKEN_EXPIRY = '30d';
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'HIKLASS Academy';
 const ORDER_EMAIL_SENT_MESSAGE = '🎉 Your order has been received successfully! A confirmation email has been sent to your registered email address. Please check your inbox for your order details and further instructions.';
 const ORDER_EMAIL_INTRO = 'This automated email confirms that your order was saved successfully. Please keep this message for your records.';
@@ -252,6 +259,14 @@ const emailStatusLimiter = rateLimit({
   message: { message: 'Too many email status checks. Please wait a few minutes and try again.' },
 });
 
+const studentAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many attempts. Please wait a few minutes and try again.' },
+});
+
 app.use('/api', apiLimiter);
 
 function requireAdmin(req, res, next) {
@@ -272,6 +287,28 @@ function requireAdmin(req, res, next) {
   }
 
   next();
+}
+
+function requireStudent(req, res, next) {
+  if (!JWT_SECRET) {
+    res.status(503).json({ message: 'Student login is not configured. Set JWT_SECRET in server/.env.' });
+    return;
+  }
+
+  const authHeader = req.get('authorization') || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token) {
+    res.status(401).json({ message: 'Student access denied.' });
+    return;
+  }
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.student = { id: payload.id, email: payload.email, name: payload.name };
+    next();
+  } catch {
+    res.status(401).json({ message: 'Your session has expired. Please sign in again.' });
+  }
 }
 
 function cleanText(value, maxLength = 500) {
@@ -575,6 +612,7 @@ const STORAGE_FILES = {
   courses: path.join(DATA_DIR, 'courses.json'),
   packages: path.join(DATA_DIR, 'packages.json'),
   students: path.join(DATA_DIR, 'students.json'),
+  'student-accounts': path.join(DATA_DIR, 'student-accounts.json'),
   payments: path.join(DATA_DIR, 'payments.json'),
   discounts: path.join(DATA_DIR, 'discounts.json'),
   instructors: path.join(DATA_DIR, 'instructors.json'),
@@ -587,6 +625,47 @@ const STORAGE_FILES = {
   'activity-logs': path.join(DATA_DIR, 'activity-logs.json'),
   reports: path.join(DATA_DIR, 'reports.json'),
 };
+
+// One-time migration: if DATA_DIR was pointed at a new location (e.g. to survive
+// redeploys), pull over any data files still sitting in the old hardcoded `storage/`
+// folder so existing orders/enrollments aren't seen as missing.
+const LEGACY_DATA_DIR = path.join(__dirname, '..', 'storage');
+
+async function migrateLegacyDataFiles() {
+  if (path.resolve(DATA_DIR) === path.resolve(LEGACY_DATA_DIR)) return;
+  let legacyEntries;
+  try {
+    legacyEntries = await fsp.readdir(LEGACY_DATA_DIR);
+  } catch {
+    return;
+  }
+
+  const fileNames = new Set([
+    path.basename(ORDERS_FILE),
+    'admin-profile.json',
+    ...Object.values(STORAGE_FILES).map((filePath) => path.basename(filePath)),
+  ]);
+
+  for (const fileName of fileNames) {
+    if (!legacyEntries.includes(fileName)) continue;
+    const target = path.join(DATA_DIR, fileName);
+    try {
+      await fsp.access(target);
+      continue; // already present at the new location; never overwrite it
+    } catch {
+      // not present yet at the new location, fall through and copy it
+    }
+    try {
+      await fsp.mkdir(DATA_DIR, { recursive: true });
+      await fsp.copyFile(path.join(LEGACY_DATA_DIR, fileName), target);
+      console.log(`Migrated legacy data file into DATA_DIR: ${fileName}`);
+    } catch (error) {
+      console.error(`Failed to migrate legacy data file ${fileName}:`, error);
+    }
+  }
+}
+
+await migrateLegacyDataFiles();
 
 async function readJsonFile(key) {
   const filePath = STORAGE_FILES[key];
@@ -2910,6 +2989,121 @@ app.post('/api/course-orders', orderLimiter, handleOrder);
 app.post('/api/api/enrollments', orderLimiter, handleOrder);
 app.post('/enrollments', orderLimiter, handleOrder);
 app.post('/api/enquiries', orderLimiter, handleOrder);
+
+// ---- Student portal routes ----
+
+function signStudentToken(account) {
+  return jwt.sign({ id: account.id, email: account.email, name: account.name }, JWT_SECRET, { expiresIn: STUDENT_TOKEN_EXPIRY });
+}
+
+function publicStudentAccount(account) {
+  return { id: account.id, name: account.name, email: account.email, phone: account.phone || '' };
+}
+
+app.post('/api/student/auth/register', studentAuthLimiter, async (req, res) => {
+  try {
+    if (!JWT_SECRET) {
+      res.status(503).json({ message: 'Student login is not configured. Set JWT_SECRET in server/.env.' });
+      return;
+    }
+
+    const name = cleanText(req.body?.name, 90);
+    const email = cleanText(req.body?.email, 120).toLowerCase();
+    const phone = cleanText(req.body?.phone, 40);
+    const password = String(req.body?.password || '');
+
+    if (name.length < 2) { res.status(400).json({ message: 'Your name is required.' }); return; }
+    if (!isEmail(email)) { res.status(400).json({ message: 'A valid email address is required.' }); return; }
+    if (password.length < 6) { res.status(400).json({ message: 'Password must be at least 6 characters.' }); return; }
+
+    const accounts = await readJsonFile('student-accounts');
+    if (accounts.some((account) => account.email === email)) {
+      res.status(409).json({ message: 'An account with this email already exists.' });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const account = {
+      id: `STU-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+      name,
+      email,
+      phone,
+      passwordHash,
+      createdAt: new Date().toISOString(),
+    };
+    accounts.push(account);
+    await writeJsonFile('student-accounts', accounts);
+
+    res.status(201).json({ token: signStudentToken(account), student: publicStudentAccount(account) });
+  } catch (error) {
+    console.error('Student registration failed:', error);
+    res.status(500).json({ message: 'Could not create your account. Please try again.' });
+  }
+});
+
+app.post('/api/student/auth/login', studentAuthLimiter, async (req, res) => {
+  try {
+    if (!JWT_SECRET) {
+      res.status(503).json({ message: 'Student login is not configured. Set JWT_SECRET in server/.env.' });
+      return;
+    }
+
+    const email = cleanText(req.body?.email, 120).toLowerCase();
+    const password = String(req.body?.password || '');
+    const accounts = await readJsonFile('student-accounts');
+    const account = accounts.find((item) => item.email === email);
+    const passwordMatches = account && (await bcrypt.compare(password, account.passwordHash));
+
+    if (!passwordMatches) {
+      res.status(401).json({ message: 'Invalid email or password.' });
+      return;
+    }
+
+    res.json({ token: signStudentToken(account), student: publicStudentAccount(account) });
+  } catch (error) {
+    console.error('Student login failed:', error);
+    res.status(500).json({ message: 'Could not sign you in. Please try again.' });
+  }
+});
+
+app.get('/api/student/me', requireStudent, async (req, res) => {
+  try {
+    const accounts = await readJsonFile('student-accounts');
+    const account = accounts.find((item) => item.id === req.student.id);
+    if (!account) { res.status(404).json({ message: 'Account not found.' }); return; }
+    res.json({ student: publicStudentAccount(account) });
+  } catch (error) {
+    console.error('Student profile read failed:', error);
+    res.status(500).json({ message: 'Could not load your profile.' });
+  }
+});
+
+app.get('/api/student/enrollments', requireStudent, async (req, res) => {
+  try {
+    const orders = await readOrders();
+    const myOrders = orders
+      .filter((order) => (order.email || '').toLowerCase() === req.student.email)
+      .map(enrichOrder);
+    res.json({ orders: myOrders });
+  } catch (error) {
+    console.error('Student enrollments read failed:', error);
+    res.status(500).json({ message: 'Could not load your enrollments.' });
+  }
+});
+
+app.get('/api/student/payments', requireStudent, async (req, res) => {
+  try {
+    const orders = await readOrders();
+    const myOrders = orders.filter((order) => (order.email || '').toLowerCase() === req.student.email);
+    const payments = await readJsonFile('payments');
+    const myPayments = mergeByKey(derivePaymentsFromOrders(myOrders), payments, (payment) => payment.enrollmentId || payment.id)
+      .filter((payment) => myOrders.some((order) => order.id === payment.enrollmentId));
+    res.json({ payments: myPayments });
+  } catch (error) {
+    console.error('Student payments read failed:', error);
+    res.status(500).json({ message: 'Could not load your payments.' });
+  }
+});
 
 // ---- Admin profile / avatar routes ----
 
