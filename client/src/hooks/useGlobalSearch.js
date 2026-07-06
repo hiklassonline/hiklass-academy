@@ -84,6 +84,8 @@ export default function useGlobalSearch(dataSources) {
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const ref = useRef(null);
+  const dataSourcesRef = useRef(dataSources);
+  dataSourcesRef.current = dataSources;
 
   const debouncedSearch = useMemo(() => debounce((q) => {
     if (!q.trim()) {
@@ -93,11 +95,11 @@ export default function useGlobalSearch(dataSources) {
     }
     setSearching(true);
     try {
-      const res = buildResults(q, dataSources);
+      const res = buildResults(q, dataSourcesRef.current);
       setResults(res);
     } catch {}
     setSearching(false);
-  }, 400), [dataSources]);
+  }, 400), []);
 
   useEffect(() => {
     if (!query.trim()) {
