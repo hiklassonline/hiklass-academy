@@ -1,0 +1,663 @@
+.studentCurriculumBack {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: var(--hk-primary);
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+.studentCurriculumBanner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: linear-gradient(120deg, var(--hk-navy), var(--hk-primary));
+  border-radius: 18px;
+  padding: 28px;
+  color: #fff;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.studentCurriculumBanner.hasPhoto {
+  background-size: cover;
+  background-position: center;
+}
+
+.studentCurriculumBanner.hasPhoto::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, rgba(9, 17, 56, 0.92) 0%, rgba(9, 17, 56, 0.82) 35%, rgba(30, 47, 151, 0.55) 70%, rgba(30, 47, 151, 0.35) 100%);
+}
+
+.studentCurriculumBannerText,
+.studentCurriculumBannerIcon {
+  position: relative;
+  z-index: 1;
+}
+
+.studentCurriculumBannerText {
+  flex: 1;
+  min-width: 240px;
+}
+
+.studentCurriculumLevelBadge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.16);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+}
+
+.studentCurriculumBannerText h1 {
+  margin: 0 0 8px;
+  font-size: 1.7rem;
+}
+
+.studentCurriculumBannerText > p {
+  margin: 0 0 18px;
+  color: #D7DEF5;
+  max-width: 520px;
+}
+
+.studentCurriculumStatsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.studentCurriculumStatsRow span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #C6D0EF;
+}
+
+.studentCurriculumStatsRow strong {
+  display: block;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.studentCurriculumBannerIcon {
+  width: 96px;
+  height: 96px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.studentCurriculumBannerIcon img {
+  width: 56px;
+  height: 56px;
+  filter: brightness(0) invert(1);
+}
+
+.studentCurriculumLayout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .studentCurriculumLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.studentCurriculumTabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--hk-border);
+  margin-bottom: 18px;
+}
+
+.studentCurriculumTabs button {
+  border: none;
+  background: none;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--hk-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+}
+
+.studentCurriculumTabs button.active {
+  color: var(--hk-primary);
+  border-bottom-color: var(--hk-primary);
+}
+
+.studentModuleList {
+  display: grid;
+  gap: 14px;
+}
+
+.studentModuleCard {
+  background: var(--hk-card);
+  border: 1px solid var(--hk-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.studentModuleHead {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--hk-text);
+}
+
+.studentModuleNumber {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--hk-primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.studentModuleHeadText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 140px;
+}
+
+.studentModuleHeadText strong {
+  font-size: 0.94rem;
+}
+
+.studentModuleHeadText small {
+  color: var(--hk-muted);
+  font-size: 0.76rem;
+}
+
+.studentModulePercent {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--hk-muted);
+  width: 36px;
+  text-align: right;
+}
+
+.studentModuleProgressTrack {
+  width: 80px;
+  height: 6px;
+  border-radius: 999px;
+  background: #E5E7EB;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.studentModuleProgressFill {
+  height: 100%;
+  background: var(--hk-primary);
+  border-radius: 999px;
+}
+
+.studentModuleBody {
+  border-top: 1px solid var(--hk-border);
+  padding: 6px 16px 12px;
+}
+
+.studentLessonRow {
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.studentLessonRow:last-child {
+  border-bottom: none;
+}
+
+.studentLessonRowHead {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--hk-text);
+}
+
+.studentLessonRowHead:disabled {
+  cursor: default;
+}
+
+.studentLessonRow.completed svg { color: var(--hk-success); }
+.studentLessonRow.inProgress svg { color: var(--hk-primary); }
+.studentLessonRow.locked svg { color: #9CA3AF; }
+.studentLessonRow.locked .studentLessonTitle,
+.studentLessonRow.locked .studentLessonId { color: #9CA3AF; }
+
+.studentLessonId {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--hk-muted);
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.studentLessonTitle {
+  flex: 1;
+  font-size: 0.86rem;
+}
+
+.studentLessonMeta {
+  font-size: 0.75rem;
+  color: var(--hk-muted);
+}
+
+.studentLessonDetail {
+  padding: 0 4px 16px 46px;
+  display: grid;
+  gap: 10px;
+}
+
+.studentLessonDetail strong {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--hk-primary);
+  margin-bottom: 4px;
+}
+
+.studentLessonDetail ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.82rem;
+  color: var(--hk-text);
+  display: grid;
+  gap: 3px;
+}
+
+.studentLessonDetail p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--hk-text);
+}
+
+.studentCurriculumCertBanner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+
+.studentCurriculumCertBanner.muted {
+  background: var(--hk-bg);
+  border-color: var(--hk-border);
+}
+
+.studentCurriculumCertBanner span {
+  font-size: 1.6rem;
+}
+
+.studentCurriculumCertBanner div {
+  flex: 1;
+}
+
+.studentCurriculumCertBanner strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--hk-text);
+}
+
+.studentCurriculumCertBanner p {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--hk-muted);
+}
+
+.studentCurriculumCertBanner a {
+  background: var(--hk-card);
+  border: 1px solid var(--hk-border);
+  color: var(--hk-primary);
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 9px 16px;
+  border-radius: 9px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.studentCurriculumParagraph {
+  color: var(--hk-text);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.studentCard h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.studentCard h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 20px 0 8px;
+  font-size: 0.9rem;
+  color: var(--hk-primary);
+}
+
+.studentCurriculumList {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.85rem;
+  color: var(--hk-text);
+  display: grid;
+  gap: 5px;
+}
+
+.studentCurriculumList.check {
+  list-style: none;
+  padding-left: 0;
+}
+
+.studentCurriculumList.check li::before {
+  content: '✅ ';
+}
+
+.studentCurriculumList.assessment {
+  list-style: none;
+  padding-left: 0;
+}
+
+.studentCurriculumList.assessment li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--hk-border);
+}
+
+.studentCurriculumTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.studentCurriculumTags span {
+  background: var(--hk-bg);
+  border: 1px solid var(--hk-border);
+  color: var(--hk-text);
+  font-size: 0.78rem;
+  padding: 5px 11px;
+  border-radius: 8px;
+}
+
+.studentCurriculumSidebar {
+  display: grid;
+  gap: 20px;
+}
+
+.studentCurriculumProgressRow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.studentCurriculumLegend {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+}
+
+.studentCurriculumLegend span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--hk-muted);
+}
+
+.studentCurriculumLegend em {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  font-style: normal;
+}
+
+.studentCurriculumLegend strong {
+  margin-left: auto;
+  color: var(--hk-text);
+  font-size: 0.85rem;
+}
+
+.studentCurriculumSeeMore {
+  border: none;
+  background: none;
+  color: var(--hk-primary);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.studentCurriculumResourceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--hk-text);
+  padding: 4px 0;
+}
+
+.studentCurriculumResourceRow span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--hk-muted);
+}
+
+.studentCurriculumHelp {
+  background: linear-gradient(160deg, var(--hk-primary), var(--hk-royal));
+  color: #fff;
+}
+
+.studentCurriculumHelp strong {
+  display: block;
+  margin: 8px 0 4px;
+}
+
+.studentCurriculumHelp p {
+  margin: 0 0 14px;
+  font-size: 0.8rem;
+  color: #D7DEF5;
+}
+
+.studentCurriculumHelp a {
+  display: block;
+  text-align: center;
+  background: #fff;
+  color: var(--hk-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 9px;
+  border-radius: 9px;
+  text-decoration: none;
+}
+
+/* Assignments */
+
+.studentAssignmentList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.studentAssignmentError {
+  background: #FEE2E2;
+  color: #B91C1C;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.studentAssignmentHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.studentAssignmentInstructions {
+  white-space: pre-line;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--hk-text);
+  background: var(--hk-bg);
+  border: 1px solid var(--hk-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 10px 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.studentAssignmentCourseLabel {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: var(--hk-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.studentAssignmentHead h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  color: var(--hk-text);
+}
+
+.studentAssignmentDue {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: var(--hk-muted);
+}
+
+.studentAssignmentGrade {
+  background: #EEF1FD;
+  border: 1px solid #C7D2FE;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 10px 0;
+}
+
+.studentAssignmentGrade strong {
+  display: block;
+  color: var(--hk-primary);
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.studentAssignmentGrade p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--hk-text);
+}
+
+.studentAssignmentSubmission {
+  background: var(--hk-bg);
+  border: 1px solid var(--hk-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 10px 0;
+  font-size: 0.85rem;
+}
+
+.studentAssignmentSubmission a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--hk-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.studentAssignmentSubmission p {
+  margin: 8px 0 0;
+  color: var(--hk-text);
+}
+
+.studentAssignmentSubmission small {
+  display: block;
+  margin-top: 8px;
+  color: var(--hk-muted);
+  font-size: 0.72rem;
+}
+
+.studentAssignmentForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.studentAssignmentFileInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px dashed var(--hk-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  color: var(--hk-muted);
+  cursor: pointer;
+}
+
+.studentAssignmentFileInput input[type='file'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.studentAssignmentForm textarea {
+  border: 1px solid var(--hk-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.studentAssignmentForm .studentBtnPrimary {
+  align-self: flex-start;
+}

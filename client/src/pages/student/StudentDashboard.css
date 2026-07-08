@@ -1,168 +1,320 @@
-.studentDashboardPage {
-  min-height: 100vh;
-  background: #F8FAFC;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-}
-
-.studentDashboardHeader {
+.studentTopCard {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px clamp(20px, 5vw, 64px);
-  background: #FFFFFF;
-  border-bottom: 1px solid #E5E7EB;
+  align-items: stretch;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: linear-gradient(120deg, #EEF1FD, #E7ECFB);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 20px;
 }
 
-.studentDashboardBrand img {
-  height: 34px;
+.studentWelcomeBlock {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 14px;
+  min-width: 220px;
 }
 
-.studentDashboardLogout {
+.studentWelcomeGreeting {
+  margin: 0;
+  color: var(--hk-muted);
+  font-size: 1rem;
+}
+
+.studentWelcomeBlock h2 {
+  margin: 2px 0 10px;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--hk-text);
+}
+
+.studentWelcomeSubtitle {
+  margin: 0 0 18px;
+  color: var(--hk-muted);
+  max-width: 340px;
+}
+
+.studentWelcomeBlock a {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
-  background: #FFFFFF;
-  border: 1px solid #D1D5DB;
-  border-radius: 8px;
-  color: #111827;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  transition: background 150ms ease;
-}
-
-.studentDashboardLogout:hover {
-  background: #F3F4F6;
-}
-
-.studentDashboardBody {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: clamp(28px, 6vw, 56px) 20px;
-}
-
-.studentDashboardBody h1 {
-  margin: 0 0 8px;
-  color: #111827;
-  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  align-self: flex-start;
+  background: var(--hk-primary);
+  color: #fff;
+  text-decoration: none;
   font-weight: 700;
+  font-size: 0.9rem;
+  padding: 12px 22px;
+  border-radius: 11px;
 }
 
-.studentDashboardSubtitle {
-  margin: 0 0 32px;
-  color: #6B7280;
-  font-size: 1.02rem;
+.studentStatsPanel {
+  flex: 2 1 480px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  background: var(--hk-card);
+  border-radius: 14px;
+  padding: 22px 26px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
 }
 
-.studentDashboardState {
-  padding: 20px;
-  color: #6B7280;
-  text-align: center;
+.studentProgressRing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
-.studentDashboardError {
-  color: #D30D1A;
+.studentProgressRing strong {
+  font-size: 1.5rem;
+  color: var(--hk-primary);
 }
 
-.studentDashboardEmpty {
+.studentProgressRing span {
+  font-size: 0.78rem;
+  color: var(--hk-muted);
+}
+
+.studentStatsGrid {
+  flex: 1;
+  min-width: 260px;
   display: grid;
-  gap: 10px;
-  justify-items: center;
-  padding: 56px 24px;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  border-radius: 16px;
-  color: #6B7280;
-  text-align: center;
-}
-
-.studentDashboardEmpty svg {
-  color: #1E2F97;
-}
-
-.studentDashboardEmpty h2 {
-  margin: 0;
-  color: #111827;
-  font-size: 1.3rem;
-}
-
-.studentDashboardCta {
-  margin-top: 12px;
-  padding: 12px 24px;
-  background: #D30D1A;
-  border-radius: 8px;
-  color: #FFFFFF;
-  font-weight: 700;
-}
-
-.studentDashboardList {
-  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
   gap: 16px;
 }
 
-.studentDashboardCard {
-  display: grid;
-  grid-template-columns: 48px 1fr auto;
-  gap: 18px;
+.studentStatTile {
+  display: flex;
   align-items: center;
-  padding: 20px;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
-  border-radius: 14px;
+  gap: 10px;
 }
 
-.studentDashboardCardIcon {
-  display: grid;
-  width: 48px;
-  height: 48px;
-  place-items: center;
-  background: #EEF4FF;
-  border-radius: 50%;
-  color: #1E2F97;
+.studentStatTile span.studentStatIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.studentDashboardCardBody h3 {
-  margin: 0 0 4px;
-  color: #111827;
-  font-size: 1.05rem;
+.studentStatTile strong {
+  display: block;
+  font-size: 1.1rem;
+  color: var(--hk-text);
+  line-height: 1.2;
+}
+
+.studentStatTile small {
+  color: var(--hk-muted);
+  font-size: 0.76rem;
+}
+
+.studentCardHeadTag {
+  font-size: 0.78rem;
   font-weight: 700;
+  color: var(--hk-primary);
+  background: #EEF1FD;
+  padding: 4px 10px;
+  border-radius: 999px;
 }
 
-.studentDashboardCardBody p {
-  margin: 0;
-  color: #6B7280;
+.studentProgressOverviewGrid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.studentTopSubjects h4 {
+  margin: 0 0 14px;
   font-size: 0.92rem;
+  color: var(--hk-text);
 }
 
-.studentDashboardCardMeta {
+@media (max-width: 720px) {
+  .studentProgressOverviewGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.studentDashboardSection {
+  margin: 20px 0;
+}
+
+.studentCoursesScroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.studentCoursesScroll .studentCourseCard {
+  min-width: 220px;
+  flex-shrink: 0;
+}
+
+.studentOrderStatusRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hk-border);
+}
+
+.studentOrderStatusRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.studentOrderStatusRow div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.studentOrderStatusRow strong {
+  font-size: 0.83rem;
+  color: var(--hk-text);
+}
+
+.studentOrderStatusRow p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--hk-muted);
+  max-width: 220px;
+}
+
+.studentUpcomingList {
   display: grid;
-  gap: 8px;
-  justify-items: end;
-  text-align: right;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.studentDashboardAmount {
-  display: inline-flex;
+.studentUpcomingRow {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  color: #111827;
-  font-weight: 700;
-}
-
-.studentDashboardPaymentMethod {
-  color: #6B7280;
+  gap: 10px;
   font-size: 0.85rem;
 }
 
-@media (max-width: 640px) {
-  .studentDashboardCard {
-    grid-template-columns: 40px 1fr;
-  }
+.studentUpcomingDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 
-  .studentDashboardCardMeta {
-    grid-column: 1 / -1;
-    justify-items: start;
-    text-align: left;
+.studentUpcomingRow strong {
+  display: block;
+  color: var(--hk-text);
+  font-size: 0.85rem;
+}
+
+.studentUpcomingRow small {
+  color: var(--hk-muted);
+  font-size: 0.75rem;
+}
+
+.studentMiniCalendar {
+  border-top: 1px solid var(--hk-border);
+  padding-top: 14px;
+}
+
+.studentMiniCalendarHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+}
+
+.studentMiniCalendarHead button {
+  border: none;
+  background: var(--hk-bg);
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--hk-text);
+  margin-left: 4px;
+}
+
+.studentMiniCalendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.studentMiniCalendarWeekday {
+  font-size: 0.68rem;
+  color: var(--hk-muted);
+  font-weight: 700;
+}
+
+.studentMiniCalendarDay {
+  position: relative;
+  font-size: 0.76rem;
+  color: var(--hk-text);
+  padding: 5px 0;
+  border-radius: 6px;
+}
+
+.studentMiniCalendarDay.today {
+  background: var(--hk-primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+.studentMiniCalendarDay em {
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--hk-accent);
+  font-style: normal;
+}
+
+.studentMiniCalendarDay.today em {
+  background: #fff;
+}
+
+.studentQuickActions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.studentQuickActionBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 16px 8px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .studentStatsGrid {
+    grid-template-columns: 1fr 1fr;
   }
 }

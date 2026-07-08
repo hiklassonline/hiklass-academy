@@ -1,0 +1,450 @@
+:root {
+  --hk-primary: #1E2F97;
+  --hk-royal: #2554A5;
+  --hk-accent: #D30D1A;
+  --hk-navy: #07162F;
+  --hk-bg: #F5F7FB;
+  --hk-card: #FFFFFF;
+  --hk-border: #E5E7EB;
+  --hk-text: #111827;
+  --hk-muted: #6B7280;
+  --hk-success: #16A34A;
+  --hk-warning: #F59E0B;
+}
+
+.studentPortal {
+  min-height: 100vh;
+  display: flex;
+  background: var(--hk-bg);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  color: var(--hk-text);
+}
+
+/* ---- Sidebar ---- */
+
+.studentPortalSidebar {
+  width: 250px;
+  flex-shrink: 0;
+  background: var(--hk-navy);
+  display: flex;
+  flex-direction: column;
+  padding: 22px 16px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width 0.2s ease;
+}
+
+.studentPortal.collapsed .studentPortalSidebar {
+  width: 76px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.studentPortal.collapsed .studentPortalLogo span,
+.studentPortal.collapsed .studentPortalNav span,
+.studentPortal.collapsed .studentPortalLogoutLink span,
+.studentPortal.collapsed .studentPortalNavBadge,
+.studentPortal.collapsed .studentPortalHelpCard strong,
+.studentPortal.collapsed .studentPortalHelpCard p,
+.studentPortal.collapsed .studentPortalHelpCard a {
+  display: none;
+}
+
+.studentPortal.collapsed .studentPortalLogo {
+  justify-content: center;
+}
+
+.studentPortal.collapsed .studentPortalNav a,
+.studentPortal.collapsed .studentPortalLogoutLink {
+  justify-content: center;
+  padding: 11px;
+}
+
+.studentPortal.collapsed .studentPortalHelpCard {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+
+.studentPortalLogo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 22px;
+  text-decoration: none;
+}
+
+.studentPortalLogo img {
+  width: 36px;
+  height: 36px;
+}
+
+.studentPortalLogo span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.studentPortalLogo strong {
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.studentPortalLogo small {
+  color: #9CA9C7;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+.studentPortalNav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.studentPortalNav a,
+.studentPortalLogoutLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  color: #B7C0D8;
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  position: relative;
+}
+
+.studentPortalNav a:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.studentPortalNav a.active {
+  background: var(--hk-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(30, 47, 151, 0.4);
+}
+
+.studentPortalLogoutLink {
+  margin-top: 14px;
+  color: #EF9A9A;
+}
+
+.studentPortalLogoutLink:hover {
+  background: rgba(211, 13, 26, 0.12);
+  color: #ffffff;
+}
+
+.studentPortalNavBadge {
+  margin-left: auto;
+  background: var(--hk-accent);
+  color: #fff;
+  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.studentPortalHelpCard {
+  margin-top: 18px;
+  background: linear-gradient(160deg, var(--hk-primary), var(--hk-royal));
+  border-radius: 14px;
+  padding: 18px;
+  color: #fff;
+}
+
+.studentPortalHelpCard strong {
+  display: block;
+  margin: 8px 0 4px;
+  font-size: 0.95rem;
+}
+
+.studentPortalHelpCard p {
+  margin: 0 0 14px;
+  font-size: 0.8rem;
+  color: #D7DEF5;
+  line-height: 1.4;
+}
+
+.studentPortalHelpCard a {
+  display: block;
+  text-align: center;
+  background: #ffffff;
+  color: var(--hk-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 9px;
+  border-radius: 9px;
+  text-decoration: none;
+}
+
+.studentPortalBackdrop {
+  display: none;
+}
+
+/* ---- Main / topbar ---- */
+
+.studentPortalMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.studentPortalTopbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--hk-card);
+  border-bottom: 1px solid var(--hk-border);
+  padding: 16px 28px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.studentPortalTopbar h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--hk-text);
+}
+
+.studentPortalMenuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--hk-text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.studentPortalTopbarActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studentPortalIconButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--hk-bg);
+  color: var(--hk-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.studentPortalIconButton:hover {
+  background: var(--hk-primary);
+  color: #fff;
+}
+
+.studentPortalIconButton:active {
+  transform: scale(0.92);
+}
+
+.studentPortalIconButton:focus-visible {
+  outline: 2px solid var(--hk-primary);
+  outline-offset: 2px;
+}
+
+.studentPortalIconButton em {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: var(--hk-accent);
+  color: #fff;
+  font-style: normal;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  box-shadow: 0 0 0 2px var(--hk-card);
+  animation: studentBellPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes studentBellPulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--hk-card), 0 0 0 2px var(--hk-card); }
+  50% { box-shadow: 0 0 0 2px var(--hk-card), 0 0 0 5px rgba(211, 13, 26, 0.25); }
+}
+
+.studentPortalUserMenu {
+  position: relative;
+}
+
+.studentPortalUserButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.studentPortalAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--hk-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.studentPortalAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.studentPortalUserText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.studentPortalUserText strong {
+  font-size: 0.88rem;
+  color: var(--hk-text);
+}
+
+.studentPortalUserText small {
+  font-size: 0.72rem;
+  color: var(--hk-muted);
+}
+
+.studentPortalUserDropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: var(--hk-card);
+  border: 1px solid var(--hk-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  min-width: 160px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+.studentPortalUserDropdown a,
+.studentPortalUserDropdown button {
+  padding: 11px 16px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--hk-text);
+  font-size: 0.87rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.studentPortalUserDropdown a:hover,
+.studentPortalUserDropdown button:hover {
+  background: var(--hk-bg);
+}
+
+.studentPortalContent {
+  flex: 1;
+  padding: 24px 28px 48px;
+}
+
+@media (max-width: 1080px) {
+  .studentPortalSidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 30;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .studentPortalSidebar.open {
+    transform: translateX(0);
+  }
+
+  .studentPortalBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 22, 47, 0.45);
+    border: none;
+    z-index: 25;
+  }
+
+  .studentPortal.collapsed .studentPortalSidebar {
+    width: 250px;
+    padding: 22px 16px;
+  }
+
+  .studentPortal.collapsed .studentPortalLogo span,
+  .studentPortal.collapsed .studentPortalNav span,
+  .studentPortal.collapsed .studentPortalLogoutLink span,
+  .studentPortal.collapsed .studentPortalNavBadge,
+  .studentPortal.collapsed .studentPortalHelpCard strong,
+  .studentPortal.collapsed .studentPortalHelpCard p,
+  .studentPortal.collapsed .studentPortalHelpCard a {
+    display: revert;
+  }
+
+  .studentPortal.collapsed .studentPortalLogo {
+    justify-content: flex-start;
+  }
+
+  .studentPortal.collapsed .studentPortalNav a,
+  .studentPortal.collapsed .studentPortalLogoutLink {
+    justify-content: flex-start;
+    padding: 11px 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .studentPortalTopbar {
+    padding: 14px 16px;
+  }
+
+  .studentPortalUserText {
+    display: none;
+  }
+
+  .studentPortalContent {
+    padding: 18px 16px 40px;
+  }
+}

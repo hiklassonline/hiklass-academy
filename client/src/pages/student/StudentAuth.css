@@ -150,6 +150,53 @@
   text-align: center;
 }
 
+.studentAuthGoogle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.googleAuthIconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid #DADCE0;
+  background: #ffffff;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.googleAuthIconButton:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  background: #F8F9FA;
+}
+
+.googleAuthIconButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
+}
+
+.studentAuthDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+  color: #9CA3AF;
+  font-size: 0.9rem;
+}
+
+.studentAuthDivider::before,
+.studentAuthDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #E5E7EB;
+}
+
 .studentAuthField {
   display: grid;
   gap: 10px;

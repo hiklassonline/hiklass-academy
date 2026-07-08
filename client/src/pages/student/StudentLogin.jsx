@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Eye, EyeOff, GraduationCap, LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
 import { brandAssets } from '../../assets';
-import { loginStudent } from '../../services/studentAuthService';
+import { loginStudent, loginWithGoogleCredential } from '../../services/studentAuthService';
+import GoogleAuthButton from '../../components/GoogleAuthButton';
 import './StudentAuth.css';
+
+const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
 function validate(values) {
   const errors = {};
@@ -45,6 +48,19 @@ export default function StudentLogin() {
     }
   }
 
+  const handleGoogleCredential = useCallback(async (credential) => {
+    setFormError('');
+    setLoading(true);
+    try {
+      await loginWithGoogleCredential(credential, values.rememberMe);
+      window.location.assign('/student/dashboard');
+    } catch (error) {
+      setFormError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [values.rememberMe]);
+
   return (
     <main className="studentAuthPage">
       <section className="studentAuthBrandPanel">
@@ -73,6 +89,15 @@ export default function StudentLogin() {
           </div>
           <h2>Student Login</h2>
           <p>Enter your credentials to continue</p>
+
+          {GOOGLE_ENABLED ? (
+            <>
+              <div className="studentAuthGoogle">
+                <GoogleAuthButton onCredential={handleGoogleCredential} type="icon" />
+              </div>
+              <div className="studentAuthDivider"><span>or sign in with email</span></div>
+            </>
+          ) : null}
 
           <label className="studentAuthField">
             <span>Email Address</span>

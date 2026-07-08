@@ -59,6 +59,12 @@ import {
   X,
 } from 'lucide-react';
 import { brandAssets, uiAssets } from './assets';
+import starterPackageImage from './assets/course-images/Starter-Package.jpg';
+import creativePackageImage from './assets/course-images/Creative-Package.jpg';
+import developerPackageImage from './assets/course-images/Developer-Package.jpg';
+import professionalPackageImage from './assets/course-images/Professional-Package.jpg';
+import aiFutureTechPackageImage from './assets/course-images/AI-&-Future-Tech-Package.jpg';
+import kidsHolidayPackageImage from './assets/course-images/Kids-Holiday-Package.jpg';
 import { categories, courses } from './data/courses';
 import Modal from './components/admin/Modal';
 import ConfirmDialog from './components/admin/ConfirmDialog';
@@ -69,14 +75,16 @@ import PaymentDetailsPanel from './components/PaymentDetailsPanel';
 import PaymentMethodSelector from './components/PaymentMethodSelector';
 import SmartsuppChat from './components/SmartsuppChat';
 import AdminLogin from './pages/admin/AdminLogin';
+import AdminContentManager from './pages/admin/AdminContentManager';
 import StudentLogin from './pages/student/StudentLogin';
 import StudentRegister from './pages/student/StudentRegister';
-import StudentDashboard from './pages/student/StudentDashboard';
+import StudentPortal from './pages/student/StudentPortal';
 import { paymentMethodOptions } from './data/paymentMethods';
 import { submitEnrollment } from './services/api';
 import { ADMIN_TOKEN_KEY, clearAdminSession, getStoredAdminToken } from './services/authService';
 import { getStoredStudentToken } from './services/studentAuthService';
 import API_URL from './utils/apiBaseUrl';
+import getAssetUrl from './utils/getAssetUrl';
 import './styles.css';
 
 const WHATSAPP_NUMBER = '237651251941';
@@ -102,6 +110,7 @@ const packages = [
     name: 'Starter Package',
     price: 50000,
     duration: '2 Weeks',
+    image: starterPackageImage,
     courses: ['Basic Computer', 'Internet & Email', 'Microsoft Word', 'Microsoft PowerPoint'],
   },
   {
@@ -109,6 +118,7 @@ const packages = [
     name: 'Creative Package',
     price: 100000,
     duration: '1 Month',
+    image: creativePackageImage,
     courses: ['Canva', 'Photoshop', 'Illustrator', 'CorelDRAW', 'CapCut'],
   },
   {
@@ -116,6 +126,7 @@ const packages = [
     name: 'Developer Package',
     price: 150000,
     duration: '2 Months',
+    image: developerPackageImage,
     courses: ['HTML5', 'CSS3', 'JavaScript', 'React', 'Node.js', 'Database Fundamentals'],
   },
   {
@@ -123,6 +134,7 @@ const packages = [
     name: 'Professional Package',
     price: 200000,
     duration: '3 Months',
+    image: professionalPackageImage,
     courses: ['Full Stack Development', 'Mobile App Development', 'UI/UX Design', 'Cloud Computing'],
   },
   {
@@ -130,6 +142,7 @@ const packages = [
     name: 'AI & Future Tech Package',
     price: 150000,
     duration: '1 Month',
+    image: aiFutureTechPackageImage,
     courses: ['Artificial Intelligence', 'Prompt Engineering', 'ChatGPT Productivity', 'Automation Tools'],
   },
   {
@@ -137,6 +150,7 @@ const packages = [
     name: 'Kids Holiday Package',
     price: 75000,
     duration: '1 Month',
+    image: kidsHolidayPackageImage,
     courses: ['Scratch Programming', 'Coding for Kids', 'Animation', 'Robotics Basics'],
   },
 ];
@@ -497,6 +511,7 @@ function courseCatalogRows() {
 
 function Header() {
   const [open, setOpen] = useState(false);
+  const isStudentLoggedIn = Boolean(getStoredStudentToken());
   const links = [
     ['Courses', '#courses'],
     ['Why HIKLASS', '#why'],
@@ -517,12 +532,20 @@ function Header() {
             {label}
           </a>
         ))}
-        <a href="/student/login" onClick={() => setOpen(false)}>
-          Student Login
-        </a>
-        <a href="/student/register" onClick={() => setOpen(false)}>
-          Student Sign Up
-        </a>
+        {isStudentLoggedIn ? (
+          <a href="/student/dashboard" onClick={() => setOpen(false)}>
+            Dashboard
+          </a>
+        ) : (
+          <>
+            <a href="/student/login" onClick={() => setOpen(false)}>
+              Login
+            </a>
+            <a href="/student/register" onClick={() => setOpen(false)}>
+              Sign Up
+            </a>
+          </>
+        )}
       </nav>
 
       <a className="enroll-btn" href="#enroll">
@@ -608,28 +631,51 @@ function CategorySection() {
 }
 
 function CourseCard({ course, selected, onToggle }) {
+  const isNewBadge = /new/i.test(course.badge || '');
   return (
     <article className={selected ? 'courseCard selected' : 'courseCard'}>
-      <div className="courseTop">
-        <span className="courseBadge">
-          <img src={course.icon} alt="" />
-        </span>
-        <button type="button" className="selectButton" onClick={() => onToggle(course)} aria-pressed={selected}>
-          {selected ? <Check size={16} /> : null}
-          {selected ? 'Selected' : 'Select'}
-        </button>
-      </div>
-      <p className="meta">{course.category}</p>
-      <h3>{course.title}</h3>
-      <p className="coursePrice">{formatPrice(course.price)}</p>
-      <p className="duration">
-        <Clock3 size={16} />
-        {course.duration}
-      </p>
-      <div className="topicList">
-        {course.topics.map((topic) => (
-          <span key={topic}>{topic}</span>
-        ))}
+      {course.badge ? (
+        <span className={`courseCardBadge${isNewBadge ? ' isNew' : ''}`}>{course.badge}</span>
+      ) : null}
+      {course.image ? (
+        <div className="courseCardImageWrap">
+          <img className="courseCardImage" src={course.image} alt="" />
+          <button
+            type="button"
+            className="selectButton courseCardSelectFloat"
+            onClick={() => onToggle(course)}
+            aria-pressed={selected}
+          >
+            {selected ? <Check size={16} /> : null}
+            {selected ? 'Selected' : 'Select'}
+          </button>
+        </div>
+      ) : null}
+      <div className={`courseCardBody${!course.image ? ' noImage' : ''}`}>
+        {!course.image ? (
+          <div className="courseTop">
+            <span className="courseBadge">
+              <img src={course.icon} alt="" />
+            </span>
+            <button type="button" className="selectButton" onClick={() => onToggle(course)} aria-pressed={selected}>
+              {selected ? <Check size={16} /> : null}
+              {selected ? 'Selected' : 'Select'}
+            </button>
+          </div>
+        ) : null}
+        <p className="meta">{course.category}</p>
+        <h3>{course.title}</h3>
+        <p className="coursePrice">{formatPrice(course.price)}</p>
+        <p className="duration">
+          <Clock3 size={16} />
+          {course.duration}
+        </p>
+        <p className="curriculumLabel">Course Curriculum</p>
+        <div className="topicList">
+          {course.topics.map((topic) => (
+            <span key={topic}>{topic}</span>
+          ))}
+        </div>
       </div>
     </article>
   );
@@ -637,14 +683,44 @@ function CourseCard({ course, selected, onToggle }) {
 
 function CoursesSection({ selectedCourses, onToggle }) {
   const [query, setQuery] = useState('');
+  const [livePricing, setLivePricing] = useState(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_URL}/api/courses`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load live pricing'))))
+      .then((data) => {
+        if (cancelled) return;
+        const map = new Map((data.courses || []).map((course) => [course.title, course]));
+        setLivePricing(map);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const liveCourses = useMemo(() => {
+    if (!livePricing) return courses;
+    return courses.map((course) => {
+      const live = livePricing.get(course.title);
+      if (!live) return course;
+      return {
+        ...course,
+        price: live.price || course.price,
+        duration: live.duration || course.duration,
+        category: live.category || course.category,
+        image: live.image ? getAssetUrl(live.image) : course.image,
+      };
+    });
+  }, [livePricing]);
+
   const selectedTotal = selectedCourses.reduce((sum, course) => sum + course.price, 0);
   const filteredCourses = useMemo(() => {
     const search = query.trim().toLowerCase();
-    if (!search) return courses;
-    return courses.filter((course) =>
+    if (!search) return liveCourses;
+    return liveCourses.filter((course) =>
       [course.title, course.category, course.duration, ...course.topics].join(' ').toLowerCase().includes(search),
     );
-  }, [query]);
+  }, [query, liveCourses]);
 
   return (
     <section id="courses" className="section coursesSection" aria-labelledby="courses-title">
@@ -714,33 +790,73 @@ function WhyChoose() {
 function PackageCard({ item, selected, onToggle }) {
   return (
     <button type="button" className={selected ? 'packageCard selectedPackage' : 'packageCard'} onClick={() => onToggle(item)} aria-pressed={selected}>
-      <div className="packageTop">
-        <span className="packageDuration">
-          <Clock3 size={16} />
-          {item.duration}
-        </span>
-        {selected ? <span className="selectedBadge">Selected</span> : null}
+      {item.image ? (
+        <div className="packageImageWrap">
+          <img className="packageImage" src={item.image} alt="" />
+          <div className="packageImageOverlayRow">
+            <span className="packageDuration packageDurationOnPhoto">
+              <Clock3 size={16} />
+              {item.duration}
+            </span>
+            {selected ? <span className="selectedBadge">Selected</span> : null}
+          </div>
+        </div>
+      ) : null}
+      <div className="packageBody">
+        {!item.image ? (
+          <div className="packageTop">
+            <span className="packageDuration">
+              <Clock3 size={16} />
+              {item.duration}
+            </span>
+            {selected ? <span className="selectedBadge">Selected</span> : null}
+          </div>
+        ) : null}
+        <div className="packagePriceRow">
+          <span>{formatPrice(item.price)}</span>
+          <small>Complete path</small>
+        </div>
+        <h3>{item.name}</h3>
+        <p className="packageSavings">Includes guided lessons, practical exercises, and a complete learning path.</p>
+        <div className="packageCourseList">
+          {item.courses.map((course) => (
+            <span key={course}>
+              <CheckCircle2 size={18} />
+              {course}
+            </span>
+          ))}
+        </div>
+        <span className="packageSelectLabel">{selected ? <Check size={16} /> : null}{selected ? 'Selected' : 'Select package'}</span>
       </div>
-      <div className="packagePriceRow">
-        <span>{formatPrice(item.price)}</span>
-        <small>Complete path</small>
-      </div>
-      <h3>{item.name}</h3>
-      <p className="packageSavings">Includes guided lessons, practical exercises, and a complete learning path.</p>
-      <div className="packageCourseList">
-        {item.courses.map((course) => (
-          <span key={course}>
-            <CheckCircle2 size={18} />
-            {course}
-          </span>
-        ))}
-      </div>
-      <span className="packageSelectLabel">{selected ? <Check size={16} /> : null}{selected ? 'Selected' : 'Select package'}</span>
     </button>
   );
 }
 
 function PackagesSection({ selectedPackages, onToggle }) {
+  const [livePackages, setLivePackages] = useState(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_URL}/api/packages`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load live packages'))))
+      .then((data) => {
+        if (cancelled) return;
+        const map = new Map((data.packages || []).map((item) => [item.name, item]));
+        setLivePackages(map);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const displayPackages = useMemo(() => {
+    if (!livePackages) return packages;
+    return packages.map((item) => {
+      const live = livePackages.get(item.name);
+      if (!live?.image) return item;
+      return { ...item, image: getAssetUrl(live.image) };
+    });
+  }, [livePackages]);
+
   return (
     <section id="packages" className="section packagesSection">
       <div className="sectionIntro">
@@ -749,7 +865,7 @@ function PackagesSection({ selectedPackages, onToggle }) {
         <p>Choose a complete learning path designed to help you gain skills faster, save money, and achieve your goals with a guided curriculum.</p>
       </div>
       <div className="packageGrid">
-        {packages.map((item) => (
+        {displayPackages.map((item) => (
           <PackageCard
             key={item.id}
             item={item}
@@ -759,6 +875,153 @@ function PackagesSection({ selectedPackages, onToggle }) {
         ))}
       </div>
     </section>
+  );
+}
+
+function Instructors() {
+  const [instructors, setInstructors] = useState([]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_URL}/api/instructors`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load instructors'))))
+      .then((data) => { if (!cancelled) setInstructors(data.instructors || []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!instructors.length) return null;
+
+  return (
+    <section id="instructors" className="section instructorsSection">
+      <div className="sectionIntro">
+        <p className="eyebrow">Meet the team</p>
+        <h2>Learn from instructors who've done the work.</h2>
+      </div>
+      <div className="instructorGrid">
+        {instructors.map((item) => {
+          const bioPreview = item.bio ? item.bio.split('\n').find((line) => line.trim()) || '' : '';
+          return (
+            <article className="instructorCard" key={item.id}>
+              <span className="instructorAvatar">
+                {item.image ? <img src={getAssetUrl(item.image)} alt="" /> : <UserRound size={28} />}
+              </span>
+              <h3>{item.name}</h3>
+              {item.position || item.role ? <p className="instructorRole">{item.position || item.role}</p> : null}
+              {bioPreview ? <p className="instructorBio">{bioPreview.length > 160 ? `${bioPreview.slice(0, 160)}...` : bioPreview}</p> : null}
+              {item.courses?.length ? (
+                <div className="instructorCourses">
+                  {item.courses.map((course) => <span key={course}>{course}</span>)}
+                </div>
+              ) : null}
+              <a className="instructorProfileLink" href={`/instructor/${item.id}`}>View Full Profile <ArrowRight size={14} /></a>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function InstructorProfilePage({ instructorId }) {
+  const [instructor, setInstructor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_URL}/api/instructors/${encodeURIComponent(instructorId)}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Instructor not found.'))))
+      .then((data) => { if (!cancelled) setInstructor(data.instructor); })
+      .catch((err) => { if (!cancelled) setError(err.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [instructorId]);
+
+  return (
+    <>
+      <Header />
+      <main>
+        <section className="section instructorProfileSection">
+          <a className="instructorBackLink" href="/#instructors">&larr; Back to Instructors</a>
+
+          {loading ? <p className="instructorProfileState">Loading instructor profile...</p> : null}
+          {!loading && error ? <p className="instructorProfileState">{error}</p> : null}
+
+          {!loading && instructor ? (
+            <>
+              <div className="instructorProfileHero">
+                <span className="instructorAvatar instructorAvatarLarge">
+                  {instructor.image ? <img src={getAssetUrl(instructor.image)} alt="" /> : <UserRound size={48} />}
+                </span>
+                <div>
+                  <h1>{instructor.name}</h1>
+                  {instructor.position ? <p className="instructorProfilePosition">{instructor.position}</p> : null}
+                  {instructor.professionalTitle ? <p className="instructorProfileTitle">{instructor.professionalTitle}</p> : null}
+                  {instructor.experienceYears ? (
+                    <p className="instructorProfileExperience"><BriefcaseBusiness size={15} /> {instructor.experienceYears} of experience</p>
+                  ) : null}
+                </div>
+              </div>
+
+              {instructor.bio ? (
+                <div className="instructorProfileCard">
+                  <h2>Biography</h2>
+                  {instructor.bio.split('\n').filter((p) => p.trim()).map((para, i) => <p key={i}>{para}</p>)}
+                </div>
+              ) : null}
+
+              {instructor.expertise?.length ? (
+                <div className="instructorProfileCard">
+                  <h2>Areas of Expertise</h2>
+                  <div className="instructorCourses">
+                    {instructor.expertise.map((item) => <span key={item}>{item}</span>)}
+                  </div>
+                </div>
+              ) : null}
+
+              {instructor.certifications?.length ? (
+                <div className="instructorProfileCard">
+                  <h2>Certifications &amp; Professional Development</h2>
+                  <ul className="instructorProfileList">
+                    {instructor.certifications.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+              ) : null}
+
+              {instructor.teachingPhilosophy ? (
+                <div className="instructorProfileCard instructorProfileQuote">
+                  <h2>Teaching Philosophy</h2>
+                  <blockquote>&ldquo;{instructor.teachingPhilosophy}&rdquo;<cite>&mdash; {instructor.name}</cite></blockquote>
+                </div>
+              ) : null}
+
+              {instructor.mission ? (
+                <div className="instructorProfileCard">
+                  <h2>Mission</h2>
+                  <p>{instructor.mission}</p>
+                </div>
+              ) : null}
+
+              {instructor.motto ? (
+                <div className="instructorProfileMotto">
+                  <p>{instructor.motto}</p>
+                </div>
+              ) : null}
+
+              {instructor.courses?.length ? (
+                <div className="instructorProfileCard">
+                  <h2>Courses Taught</h2>
+                  <div className="instructorCourses">
+                    {instructor.courses.map((course) => <span key={course}>{course}</span>)}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </section>
+      </main>
+    </>
   );
 }
 
@@ -1290,6 +1553,82 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
     } catch (err) { showToast(err.message, 'error'); }
   }
 
+  async function uploadInstructorPhoto(id, file) {
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const res = await fetch(`${API_URL}/api/admin/instructors/${id}/avatar`, {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Could not upload photo.');
+      showToast('Instructor photo updated.', 'success');
+      await loadSection('instructors');
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function removeInstructorPhoto(id) {
+    try {
+      await api('DELETE', `/api/admin/instructors/${id}/avatar`);
+      showToast('Instructor photo removed.', 'success');
+      await loadSection('instructors');
+    } catch (err) { showToast(err.message, 'error'); }
+  }
+
+  async function uploadCourseImage(id, file) {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch(`${API_URL}/api/admin/courses/${id}/image`, {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Could not upload image.');
+      showToast('Course image updated.', 'success');
+      await loadAll();
+      return data.course;
+    } catch (err) { showToast(err.message, 'error'); return null; }
+  }
+
+  async function removeCourseImage(id) {
+    try {
+      const data = await api('DELETE', `/api/admin/courses/${id}/image`);
+      showToast('Course image removed.', 'success');
+      await loadAll();
+      return data.course;
+    } catch (err) { showToast(err.message, 'error'); return null; }
+  }
+
+  async function uploadPackageImage(id, file) {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch(`${API_URL}/api/admin/packages/${id}/image`, {
+        method: 'POST',
+        headers: { 'x-admin-token': token },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || 'Could not upload image.');
+      showToast('Package image updated.', 'success');
+      await loadAll();
+      return data.package;
+    } catch (err) { showToast(err.message, 'error'); return null; }
+  }
+
+  async function removePackageImage(id) {
+    try {
+      const data = await api('DELETE', `/api/admin/packages/${id}/image`);
+      showToast('Package image removed.', 'success');
+      await loadAll();
+      return data.package;
+    } catch (err) { showToast(err.message, 'error'); return null; }
+  }
+
   function saveToken(e) {
     e.preventDefault();
     const nextToken = tokenInput.trim();
@@ -1535,11 +1874,33 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
     }
 
     if (activePage === 'courses') {
-      return <CatalogCRUD title="Courses" data={coursesData} kind="course" onAdd={() => setModal({ open: true, mode: 'add', data: null })} onEdit={(item) => setModal({ open: true, mode: 'edit', data: item })} onDelete={(id, label) => setConfirm({ open: true, id, label })} />;
+      return (
+        <CatalogCRUD
+          title="Courses"
+          data={coursesData}
+          kind="course"
+          onAdd={() => setModal({ open: true, mode: 'add', data: null })}
+          onEdit={(item) => setModal({ open: true, mode: 'edit', data: item })}
+          onDelete={(id, label) => setConfirm({ open: true, id, label })}
+          onUploadImage={uploadCourseImage}
+          onRemoveImage={removeCourseImage}
+        />
+      );
     }
 
     if (activePage === 'packages') {
-      return <CatalogCRUD title="Packages" data={packagesData} kind="package" onAdd={() => setModal({ open: true, mode: 'add', data: null })} onEdit={(item) => setModal({ open: true, mode: 'edit', data: item })} onDelete={(id, label) => setConfirm({ open: true, id, label })} />;
+      return (
+        <CatalogCRUD
+          title="Packages"
+          data={packagesData}
+          kind="package"
+          onAdd={() => setModal({ open: true, mode: 'add', data: null })}
+          onEdit={(item) => setModal({ open: true, mode: 'edit', data: item })}
+          onDelete={(id, label) => setConfirm({ open: true, id, label })}
+          onUploadImage={uploadPackageImage}
+          onRemoveImage={removePackageImage}
+        />
+      );
     }
 
     if (activePage === 'students') {
@@ -1555,7 +1916,16 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
     }
 
     if (activePage === 'instructors') {
-      return <InstructorsPage data={instructors} onAdd={() => setModal({ open: true, mode: 'add', page: 'instructors', data: null })} onEdit={(item) => setModal({ open: true, mode: 'edit', page: 'instructors', data: item })} onDelete={(id) => setConfirm({ open: true, id, label: 'instructor', type: 'instructors' })} />;
+      return (
+        <InstructorsPage
+          data={instructors}
+          onAdd={() => setModal({ open: true, mode: 'add', page: 'instructors', data: null })}
+          onEdit={(item) => setModal({ open: true, mode: 'edit', page: 'instructors', data: item })}
+          onDelete={(id) => setConfirm({ open: true, id, label: 'instructor', type: 'instructors' })}
+          onUploadPhoto={uploadInstructorPhoto}
+          onRemovePhoto={removeInstructorPhoto}
+        />
+      );
     }
 
     if (activePage === 'testimonials') {
@@ -1579,7 +1949,25 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
     }
 
     if (activePage === 'settings') {
-      return <SettingsPage tokenInput={tokenInput} setTokenInput={setTokenInput} saveToken={saveToken} settings={settingsData} onEdit={() => setModal({ open: true, mode: 'edit', page: 'settings', data: settingsData })} />;
+      return (
+        <SettingsPage
+          tokenInput={tokenInput}
+          setTokenInput={setTokenInput}
+          saveToken={saveToken}
+          settings={settingsData}
+          onEdit={() => setModal({ open: true, mode: 'edit', page: 'settings', data: settingsData })}
+          onTestEmail={async () => {
+            const recipient = window.prompt('Send a test email to:', settingsData?.smtpUser || settingsData?.supportEmail || '');
+            if (!recipient) return;
+            try {
+              const result = await api('POST', '/api/admin/settings/test-email', { recipient });
+              showToast(result.message, 'success');
+            } catch (err) {
+              showToast(err.message, 'error');
+            }
+          }}
+        />
+      );
     }
 
     if (activePage === 'admins') {
@@ -1618,6 +2006,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
           <button type="button" className="red" onClick={() => { openPage('courses'); setModal({ open: true, mode: 'add', page: 'courses', data: null }); }}><PlusCircle size={17} /> Add Course</button>
           <button type="button" className="blue" onClick={() => { openPage('packages'); setModal({ open: true, mode: 'add', page: 'packages', data: null }); }}><Box size={17} /> Add Package</button>
           <button type="button" className="green" onClick={() => window.location.href = 'mailto:info@hiklassacademy.com'}><Mail size={17} /> Send Email</button>
+          <button type="button" className="blue" onClick={() => { window.location.href = '/admin/content'; }}><LayoutDashboard size={17} /> Student Portal</button>
         </div>
         <footer>
           <strong>HIKLASS Academy</strong>
@@ -1667,6 +2056,17 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
   function EntityModal() {
     const { mode, data } = modal;
     const page = modal.page || activePage;
+    const addImageInputRef = React.useRef(null);
+    const [pendingImageFile, setPendingImageFile] = useState(null);
+    const [pendingImagePreview, setPendingImagePreview] = useState('');
+
+    React.useEffect(() => {
+      if (!modal.open) {
+        setPendingImageFile(null);
+        setPendingImagePreview((prev) => { if (prev) URL.revokeObjectURL(prev); return ''; });
+      }
+    }, [modal.open]);
+
     if (!mode) return null;
 
     let title, fields, endpoint;
@@ -1676,10 +2076,18 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
       fields = [
         { key: 'title', label: 'Title', type: 'text' },
         { key: 'category', label: 'Category', type: 'text' },
-        { key: 'description', label: 'Description', type: 'textarea' },
+        { key: 'description', label: 'Description (internal note, not shown on the site)', type: 'textarea' },
         { key: 'price', label: 'Price (FCFA)', type: 'number' },
         { key: 'duration', label: 'Duration', type: 'text' },
-        { key: 'icon', label: 'Icon', type: 'text' },
+        {
+          key: 'instructorName',
+          label: 'Instructor',
+          type: 'select',
+          options: [
+            { value: '', label: 'No instructor assigned' },
+            ...instructors.map((inst) => ({ value: inst.name, label: inst.name })),
+          ],
+        },
       ];
     } else if (page === 'packages') {
       title = mode === 'add' ? 'Add Package' : 'Edit Package';
@@ -1689,6 +2097,15 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
         { key: 'price', label: 'Price (FCFA)', type: 'number' },
         { key: 'duration', label: 'Duration', type: 'text' },
         { key: 'courses', label: 'Courses (comma-separated)', type: 'text' },
+        {
+          key: 'instructorName',
+          label: 'Instructor',
+          type: 'select',
+          options: [
+            { value: '', label: 'No instructor assigned' },
+            ...instructors.map((inst) => ({ value: inst.name, label: inst.name })),
+          ],
+        },
       ];
     } else if (page === 'students') {
       title = mode === 'add' ? 'Add Student' : 'Edit Student';
@@ -1731,9 +2148,16 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
       endpoint = mode === 'add' ? '/api/admin/instructors' : `/api/admin/instructors/${data.id}`;
       fields = [
         { key: 'name', label: 'Name', type: 'text' },
-        { key: 'role', label: 'Role', type: 'text' },
-        { key: 'bio', label: 'Bio', type: 'textarea' },
-        { key: 'image', label: 'Image URL', type: 'text' },
+        { key: 'position', label: 'Position (e.g. Founder, CEO & Lead Instructor)', type: 'text' },
+        { key: 'professionalTitle', label: 'Professional Title (e.g. CGI Engineer | Full-Stack Developer | ...)', type: 'text' },
+        { key: 'role', label: 'Short Role Label (shown on course cards)', type: 'text' },
+        { key: 'bio', label: 'Biography', type: 'textarea', rows: 8 },
+        { key: 'expertise', label: 'Areas of Expertise (one per line)', type: 'textarea', rows: 6 },
+        { key: 'experienceYears', label: 'Years of Experience (e.g. "15+ Years")', type: 'text' },
+        { key: 'certifications', label: 'Certifications & Professional Development (one per line)', type: 'textarea', rows: 5 },
+        { key: 'teachingPhilosophy', label: 'Teaching Philosophy (quote)', type: 'textarea', rows: 3 },
+        { key: 'mission', label: 'Mission', type: 'textarea', rows: 3 },
+        { key: 'motto', label: 'Motto', type: 'text' },
       ];
     } else if (page === 'testimonials') {
       title = mode === 'add' ? 'Add Testimonial' : 'Edit Testimonial';
@@ -1771,6 +2195,12 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
         { key: 'primaryWhatsApp', label: 'Primary WhatsApp', type: 'text' },
         { key: 'currency', label: 'Currency', type: 'text' },
         { key: 'timezone', label: 'Timezone', type: 'text' },
+        { key: 'smtpHost', label: 'SMTP Host', type: 'text', defaultValue: 'smtp.hostinger.com' },
+        { key: 'smtpPort', label: 'SMTP Port', type: 'number', defaultValue: 465 },
+        { key: 'smtpSecure', label: 'SMTP Secure (true = SSL/TLS on 465, false = STARTTLS on 587)', type: 'select', options: ['true', 'false'] },
+        { key: 'smtpUser', label: 'SMTP Username (mailbox address)', type: 'email' },
+        { key: 'smtpPass', label: 'SMTP Password (leave blank to keep current)', type: 'password' },
+        { key: 'smtpFrom', label: 'From Header (e.g. "HIKLASS Academy" <info@hiklassacademy.com>)', type: 'text' },
       ];
     } else {
       return null;
@@ -1786,9 +2216,22 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
             for (const key of ['courses', 'permissions']) {
               if (typeof body[key] === 'string') body[key] = body[key].split(',').map((s) => s.trim()).filter(Boolean);
             }
+            for (const key of ['expertise', 'certifications']) {
+              if (typeof body[key] === 'string') body[key] = body[key].split('\n').map((s) => s.trim()).filter(Boolean);
+            }
             try {
-              if (mode === 'add') { await api('POST', endpoint, body); showToast(`${title.replace(/^(Add|Edit) /, '')} created.`, 'success'); }
-              else { await api('PUT', endpoint, body); showToast(`${title.replace(/^(Add|Edit) /, '')} updated.`, 'success'); }
+              if (mode === 'add') {
+                const created = await api('POST', endpoint, body);
+                showToast(`${title.replace(/^(Add|Edit) /, '')} created.`, 'success');
+                const newId = created?.course?.id || created?.package?.id;
+                if (pendingImageFile && newId) {
+                  if (page === 'courses') await uploadCourseImage(newId, pendingImageFile);
+                  else if (page === 'packages') await uploadPackageImage(newId, pendingImageFile);
+                }
+              } else {
+                await api('PUT', endpoint, body);
+                showToast(`${title.replace(/^(Add|Edit) /, '')} updated.`, 'success');
+              }
               setModal({ open: false, mode: '', data: null });
               await loadAll();
               if (adminSyncSections.includes(page)) await loadSection(page);
@@ -1798,7 +2241,12 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
               <label key={f.key}>
                 <span>{f.label}</span>
                 {f.type === 'textarea' ? (
-                  <textarea name={f.key} defaultValue={data?.[f.key] || ''} rows={3} style={inputStyle} />
+                  <textarea
+                    name={f.key}
+                    defaultValue={Array.isArray(data?.[f.key]) ? data[f.key].join('\n') : data?.[f.key] || ''}
+                    rows={f.rows || 3}
+                    style={inputStyle}
+                  />
                 ) : f.type === 'select' ? (
                   <select
                     name={f.key}
@@ -1806,7 +2254,11 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
                     required={f.required}
                     style={inputStyle}
                   >
-                    {f.options.map((option) => <option key={option} value={option}>{option}</option>)}
+                    {f.options.map((option) => {
+                      const value = typeof option === 'object' ? option.value : option;
+                      const label = typeof option === 'object' ? option.label : option;
+                      return <option key={value} value={value}>{label}</option>;
+                    })}
                   </select>
                 ) : (
                   <input
@@ -1820,6 +2272,63 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
                 )}
               </label>
             ))}
+            {(page === 'courses' || page === 'packages') && mode === 'edit' && data ? (
+              <ModalImageField
+                image={data.image}
+                label={page === 'courses' ? 'Course Image' : 'Package Image'}
+                fallbackIcon={page === 'courses' ? BookOpen : Package}
+                onUpload={async (file) => {
+                  const updated = page === 'courses' ? await uploadCourseImage(data.id, file) : await uploadPackageImage(data.id, file);
+                  if (updated) setModal((current) => ({ ...current, data: { ...current.data, image: updated.image } }));
+                }}
+                onRemove={async () => {
+                  const updated = page === 'courses' ? await removeCourseImage(data.id) : await removePackageImage(data.id);
+                  if (updated) setModal((current) => ({ ...current, data: { ...current.data, image: updated.image } }));
+                }}
+              />
+            ) : null}
+            {(page === 'courses' || page === 'packages') && mode === 'add' ? (
+              <label>
+                <span>{page === 'courses' ? 'Course Image' : 'Package Image'} <small>(optional)</small></span>
+                <div className="modalImageField">
+                  <span className="modalImageFieldPreview">
+                    {pendingImagePreview ? (
+                      <img src={pendingImagePreview} alt="" />
+                    ) : page === 'courses' ? <BookOpen size={22} /> : <Package size={22} />}
+                  </span>
+                  <div className="modalImageFieldActions">
+                    <button type="button" className="button secondary" onClick={() => addImageInputRef.current?.click()}>
+                      {pendingImageFile ? 'Change Image' : 'Choose Image'}
+                    </button>
+                    {pendingImageFile ? (
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => {
+                          setPendingImageFile(null);
+                          setPendingImagePreview((prev) => { if (prev) URL.revokeObjectURL(prev); return ''; });
+                        }}
+                      >
+                        Clear
+                      </button>
+                    ) : null}
+                  </div>
+                  <input
+                    ref={addImageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    style={{ display: 'none' }}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = '';
+                      if (!file) return;
+                      setPendingImageFile(file);
+                      setPendingImagePreview((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(file); });
+                    }}
+                  />
+                </div>
+              </label>
+            ) : null}
             <div className="modalActions">
               <button type="button" className="button secondary" onClick={() => setModal({ open: false, mode: '', data: null })}>Cancel</button>
               <button type="submit" className="button primary">{mode === 'add' ? 'Create' : 'Save'}</button>
@@ -1828,6 +2337,44 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
       </Modal>
     );
   }
+}
+
+function ModalImageField({ image, label, fallbackIcon: FallbackIcon, onUpload, onRemove }) {
+  const inputRef = React.useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    try { await onUpload(file); } finally { setUploading(false); }
+  }
+
+  async function handleRemove() {
+    setUploading(true);
+    try { await onRemove(); } finally { setUploading(false); }
+  }
+
+  return (
+    <label>
+      <span>{label}</span>
+      <div className="modalImageField">
+        <span className="modalImageFieldPreview">
+          {image ? <img src={getAssetUrl(image)} alt="" /> : <FallbackIcon size={22} />}
+        </span>
+        <div className="modalImageFieldActions">
+          <button type="button" className="button secondary" onClick={() => inputRef.current?.click()} disabled={uploading}>
+            {uploading ? 'Working...' : image ? 'Change Image' : 'Upload Image'}
+          </button>
+          {image ? (
+            <button type="button" className="button secondary" onClick={handleRemove} disabled={uploading}>Remove</button>
+          ) : null}
+        </div>
+        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleFile} />
+      </div>
+    </label>
+  );
 }
 
 function EnrollmentTable({ orders, updateStatus, compact = false }) {
@@ -1902,7 +2449,42 @@ function EnrollmentTable({ orders, updateStatus, compact = false }) {
   );
 }
 
-function CatalogCRUD({ title, data, kind, onAdd, onEdit, onDelete }) {
+function CatalogImageCell({ item, isCourse, onUpload, onRemove }) {
+  const inputRef = React.useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    try { await onUpload(item.id, file); } finally { setUploading(false); }
+  }
+
+  const FallbackIcon = isCourse ? BookOpen : Package;
+
+  return (
+    <div className="adminCourseImageCell">
+      <button
+        type="button"
+        className="adminCourseImageButton"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        title={item.image ? 'Change image' : 'Upload image'}
+      >
+        {item.image ? <img src={getAssetUrl(item.image)} alt="" /> : <FallbackIcon size={19} />}
+      </button>
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleFile} />
+      {item.image ? (
+        <button type="button" className="adminCourseImageRemove" onClick={() => onRemove(item.id)} title="Remove image" aria-label="Remove image">
+          <X size={12} />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function CatalogCRUD({ title, data, kind, onAdd, onEdit, onDelete, onUploadImage, onRemoveImage }) {
   const isCourse = kind === 'course';
   return (
     <article className="adminPanel adminFullPanel">
@@ -1914,7 +2496,7 @@ function CatalogCRUD({ title, data, kind, onAdd, onEdit, onDelete }) {
         {data.map((item) => (
           <article className="adminCatalogCard" key={item.id || item.title || item.name}>
             <div>
-              <span className={isCourse ? 'blue' : 'red'}>{isCourse ? <BookOpen size={19} /> : <Package size={19} />}</span>
+              <CatalogImageCell item={item} isCourse={isCourse} onUpload={onUploadImage} onRemove={onRemoveImage} />
               <strong>{item.title || item.name}</strong>
               <small>{item.category || 'Package'}</small>
             </div>
@@ -1987,7 +2569,7 @@ function EmailLogsPage({ logs }) {
   );
 }
 
-function SettingsPage({ tokenInput, setTokenInput, saveToken, settings, onEdit }) {
+function SettingsPage({ tokenInput, setTokenInput, saveToken, settings, onEdit, onTestEmail }) {
   return (
     <section className="adminSettingsGrid">
       <article className="adminPanel">
@@ -2010,12 +2592,19 @@ function SettingsPage({ tokenInput, setTokenInput, saveToken, settings, onEdit }
         </div>
       </article>
       <article className="adminPanel">
-        <h2>Email Settings</h2>
+        <div className="adminPanelTitle">
+          <h2>Email Settings</h2>
+          <button type="button" onClick={onEdit}>Edit</button>
+        </div>
         <div className="settingsRows">
-          <p><span>SMTP host</span><strong>smtp.hostinger.com</strong></p>
-          <p><span>SMTP port</span><strong>465</strong></p>
-          <p><span>SMTP user</span><strong>info@hiklassacademy.com</strong></p>
-          <p><span>SMTP password</span><strong>••••••••••••</strong></p>
+          <p><span>SMTP host</span><strong>{settings?.smtpHost || 'Not set'}</strong></p>
+          <p><span>SMTP port</span><strong>{settings?.smtpPort || 'Not set'}</strong></p>
+          <p><span>SMTP secure</span><strong>{settings?.smtpSecure ? 'Yes (SSL/TLS)' : 'No (STARTTLS)'}</strong></p>
+          <p><span>SMTP user</span><strong>{settings?.smtpUser || 'Not set'}</strong></p>
+          <p><span>SMTP password</span><strong>{settings?.smtpPassSet ? '•••••••••••• (set)' : 'Not set'}</strong></p>
+        </div>
+        <div className="adminPanelTitle" style={{ marginTop: 12 }}>
+          <button type="button" className="button secondary" onClick={onTestEmail}>Send Test Email</button>
         </div>
       </article>
       <article className="adminPanel">
@@ -2148,11 +2737,77 @@ function DiscountsPage({ data, onAdd, onEdit, onDelete }) {
   );
 }
 
-function InstructorsPage({ data, onAdd, onEdit, onDelete }) {
+function InstructorPhotoCell({ instructor, onUpload, onRemove }) {
+  const inputRef = React.useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    try { await onUpload(instructor.id, file); } finally { setUploading(false); }
+  }
+
+  return (
+    <div className="adminInstructorPhotoCell">
+      <button
+        type="button"
+        className="adminInstructorPhotoButton"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        title={instructor.image ? 'Change photo' : 'Upload photo'}
+      >
+        {instructor.image ? <img src={getAssetUrl(instructor.image)} alt="" /> : <UserRound size={20} />}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        style={{ display: 'none' }}
+        onChange={handleFile}
+      />
+      {instructor.image ? (
+        <button type="button" className="adminInstructorPhotoRemove" onClick={() => onRemove(instructor.id)} title="Remove photo" aria-label="Remove photo">
+          <X size={12} />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function InstructorsPage({ data, onAdd, onEdit, onDelete, onUploadPhoto, onRemovePhoto }) {
   return (
     <article className="adminPanel adminFullPanel">
-      <div className="adminPanelTitle"><h2>Instructors</h2></div>
-      <AdminTable headers={['name', 'role', 'courses']} rows={data.map((i) => ({ ...i, courses: (i.courses || []).join(', ') }))} emptyMsg="No instructors yet" onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} addLabel="Add Instructor" />
+      <div className="adminPanelTitle">
+        <h2>Instructors</h2>
+        <button type="button" onClick={onAdd}><PlusCircle size={16} /> Add Instructor</button>
+      </div>
+      <div className="adminTableWrap">
+        <table className="adminDataTable">
+          <thead>
+            <tr><th>Photo</th><th>name</th><th>role</th><th>courses</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {data.length ? data.map((inst) => (
+              <tr key={inst.id}>
+                <td><InstructorPhotoCell instructor={inst} onUpload={onUploadPhoto} onRemove={onRemovePhoto} /></td>
+                <td>{inst.name || '-'}</td>
+                <td>{inst.role || '-'}</td>
+                <td>{(inst.courses || []).join(', ') || '-'}</td>
+                <td>
+                  <div className="adminRowActions">
+                    <button type="button" onClick={() => onEdit(inst)}>Edit</button>
+                    <button type="button" className="danger" onClick={() => onDelete(inst.id)}>Delete</button>
+                  </div>
+                </td>
+              </tr>
+            )) : (
+              <tr><td colSpan={5}><div className="emptyAdminState compact"><h3>No instructors yet</h3></div></td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </article>
   );
 }
@@ -2269,7 +2924,8 @@ function App() {
   const isAdminDashboardRoute = adminPath === '/admin' || adminPath.startsWith('/admin/');
   const isStudentLoginRoute = adminPath === '/student/login';
   const isStudentRegisterRoute = adminPath === '/student/register';
-  const isStudentDashboardRoute = adminPath === '/student' || adminPath === '/student/dashboard';
+  const isStudentPortalRoute = adminPath.startsWith('/student') && !isStudentLoginRoute && !isStudentRegisterRoute;
+  const instructorProfileMatch = adminPath.match(/^\/instructor\/(.+)$/);
   const selectedCount = selectedCourses.length + selectedPackages.length;
 
   React.useEffect(() => {
@@ -2305,6 +2961,10 @@ function App() {
     return <AdminLogin />;
   }
 
+  if (adminPath === '/admin/content') {
+    return <AdminContentManager />;
+  }
+
   if (isAdminDashboardRoute && !isAdminLoginRoute) {
     if (!getStoredAdminToken()) {
       window.history.replaceState(null, '', '/admin/login');
@@ -2319,7 +2979,7 @@ function App() {
   if (isStudentLoginRoute) {
     if (getStoredStudentToken()) {
       window.history.replaceState(null, '', '/student/dashboard');
-      return <StudentDashboard />;
+      return <StudentPortal path="/student/dashboard" />;
     }
     return <StudentLogin />;
   }
@@ -2327,20 +2987,25 @@ function App() {
   if (isStudentRegisterRoute) {
     if (getStoredStudentToken()) {
       window.history.replaceState(null, '', '/student/dashboard');
-      return <StudentDashboard />;
+      return <StudentPortal path="/student/dashboard" />;
     }
     return <StudentRegister />;
   }
 
-  if (isStudentDashboardRoute) {
+  if (isStudentPortalRoute) {
     if (!getStoredStudentToken()) {
       window.history.replaceState(null, '', '/student/login');
       return <StudentLogin />;
     }
     if (adminPath === '/student') {
       window.history.replaceState(null, '', '/student/dashboard');
+      return <StudentPortal path="/student/dashboard" />;
     }
-    return <StudentDashboard />;
+    return <StudentPortal path={adminPath} />;
+  }
+
+  if (instructorProfileMatch) {
+    return <InstructorProfilePage instructorId={decodeURIComponent(instructorProfileMatch[1])} />;
   }
 
   return (
@@ -2351,6 +3016,7 @@ function App() {
         <CategorySection />
         <CoursesSection selectedCourses={selectedCourses} onToggle={toggleCourse} />
         <WhyChoose />
+        <Instructors />
         <PackagesSection selectedPackages={selectedPackages} onToggle={togglePackage} />
         <EnrollmentForm
           selectedCourses={selectedCourses}

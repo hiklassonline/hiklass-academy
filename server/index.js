@@ -8,6 +8,7 @@ import nodemailer from 'nodemailer';
 import multer from 'multer';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import fs from 'fs';
 import fsp from 'fs/promises';
 import net from 'net';
@@ -28,12 +29,15 @@ const ORDERS_FILE = path.join(DATA_DIR, 'course-orders.json');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'info@hiklassacademy.com';
 const ADMIN_LOGIN_EMAIL = process.env.ADMIN_LOGIN_EMAIL || ADMIN_EMAIL || 'admin@hiklassacademy.com';
 let ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+let smtpOverride = null;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-only-insecure-student-jwt-secret');
 if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
   console.warn('JWT_SECRET is not set; using an insecure development fallback. Set JWT_SECRET in server/.env before deploying.');
 }
 const STUDENT_TOKEN_EXPIRY = '30d';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const googleAuthClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'HIKLASS Academy';
 const ORDER_EMAIL_SENT_MESSAGE = '🎉 Your order has been received successfully! A confirmation email has been sent to your registered email address. Please check your inbox for your order details and further instructions.';
 const ORDER_EMAIL_INTRO = 'This automated email confirms that your order was saved successfully. Please keep this message for your records.';
@@ -51,7 +55,7 @@ const EMAIL_LOGO_DIRS = [
 const allowedModes = new Set(['Online', 'Physical', 'Hybrid', 'Onsite', 'Weekend']);
 const allowedEnrollmentStatuses = new Set(['Pending', 'Confirmed', 'Paid', 'Completed', 'Cancelled', 'Refunded']);
 const allowedPaymentMethods = new Set(['MTN MOMO', 'Orange OM', 'PayPal', 'Cash']);
-const COURSE_PRICES = new Map([
+const DEFAULT_COURSE_PRICES = new Map([
   ['Basic Computer Training', 25000],
   ['Microsoft Office Suite', 35000],
   ['Graphic Design', 50000],
@@ -77,6 +81,10 @@ const COURSE_PRICES = new Map([
   ['Coding for Kids', 35000],
   ['Freelancing & Online Business', 50000],
 ]);
+
+// Mutable, kept in sync with storage/courses.json (via refreshCoursePriceCache) so
+// admin price edits immediately apply to storefront display and order validation.
+let COURSE_PRICES = new Map(DEFAULT_COURSE_PRICES);
 const PACKAGE_CATALOG = new Map(
   [
     {
@@ -213,6 +221,8 @@ const UPLOADS_DIR = path.isAbsolute(process.env.UPLOAD_DIR || '')
   : path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
 const AVATAR_DIR = path.join(UPLOADS_DIR, 'admin-avatars');
 if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
+const STUDENT_AVATAR_DIR = path.join(UPLOADS_DIR, 'student-avatars');
+if (!fs.existsSync(STUDENT_AVATAR_DIR)) fs.mkdirSync(STUDENT_AVATAR_DIR, { recursive: true });
 
 const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, AVATAR_DIR),
@@ -233,7 +243,88 @@ function avatarFileFilter(_req, file, cb) {
 
 const uploadAvatar = multer({ storage: avatarStorage, fileFilter: avatarFileFilter, limits: { fileSize: MAX_SIZE } });
 
-app.use('/uploads', express.static(UPLOADS_DIR));
+const studentAvatarStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, STUDENT_AVATAR_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeName = `student-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, safeName);
+  },
+});
+const uploadStudentAvatar = multer({ storage: studentAvatarStorage, fileFilter: avatarFileFilter, limits: { fileSize: MAX_SIZE } });
+
+const INSTRUCTOR_AVATAR_DIR = path.join(UPLOADS_DIR, 'instructor-avatars');
+if (!fs.existsSync(INSTRUCTOR_AVATAR_DIR)) fs.mkdirSync(INSTRUCTOR_AVATAR_DIR, { recursive: true });
+const instructorAvatarStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, INSTRUCTOR_AVATAR_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeName = `instructor-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, safeName);
+  },
+});
+const uploadInstructorAvatar = multer({ storage: instructorAvatarStorage, fileFilter: avatarFileFilter, limits: { fileSize: MAX_SIZE } });
+
+const COURSE_IMAGE_DIR = path.join(UPLOADS_DIR, 'course-images');
+if (!fs.existsSync(COURSE_IMAGE_DIR)) fs.mkdirSync(COURSE_IMAGE_DIR, { recursive: true });
+const courseImageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, COURSE_IMAGE_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeName = `course-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, safeName);
+  },
+});
+const COURSE_IMAGE_MAX_SIZE = 4 * 1024 * 1024;
+const uploadCourseImage = multer({ storage: courseImageStorage, fileFilter: avatarFileFilter, limits: { fileSize: COURSE_IMAGE_MAX_SIZE } });
+
+const PACKAGE_IMAGE_DIR = path.join(UPLOADS_DIR, 'package-images');
+if (!fs.existsSync(PACKAGE_IMAGE_DIR)) fs.mkdirSync(PACKAGE_IMAGE_DIR, { recursive: true });
+const packageImageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, PACKAGE_IMAGE_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeName = `package-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, safeName);
+  },
+});
+const uploadPackageImage = multer({ storage: packageImageStorage, fileFilter: avatarFileFilter, limits: { fileSize: COURSE_IMAGE_MAX_SIZE } });
+
+const ASSIGNMENT_UPLOAD_DIR = path.join(UPLOADS_DIR, 'assignment-submissions');
+if (!fs.existsSync(ASSIGNMENT_UPLOAD_DIR)) fs.mkdirSync(ASSIGNMENT_UPLOAD_DIR, { recursive: true });
+const ASSIGNMENT_ALLOWED_MIME = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/zip',
+  'application/x-zip-compressed',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+];
+const ASSIGNMENT_MAX_SIZE = 15 * 1024 * 1024;
+const assignmentStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, ASSIGNMENT_UPLOAD_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeName = `submission-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, safeName);
+  },
+});
+function assignmentFileFilter(_req, file, cb) {
+  if (ASSIGNMENT_ALLOWED_MIME.includes(file.mimetype)) cb(null, true);
+  else cb(new Error('Only PDF, Word, Excel, PowerPoint, ZIP, JPG, PNG, and WEBP files are allowed.'));
+}
+const uploadAssignmentFile = multer({ storage: assignmentStorage, fileFilter: assignmentFileFilter, limits: { fileSize: ASSIGNMENT_MAX_SIZE } });
+
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(UPLOADS_DIR));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -241,6 +332,18 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests. Please wait a few minutes and try again.' },
+  // Authenticated admin traffic (already gated by ADMIN_TOKEN) shouldn't share the
+  // public-facing budget with anonymous visitors — a busy admin panel session alone
+  // can burn through 120 requests. The login route keeps its own stricter limiter below.
+  skip: (req) => req.path.startsWith('/admin/') && req.path !== '/admin/auth/login',
+});
+
+const adminAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many login attempts. Please wait a few minutes and try again.' },
 });
 
 const orderLimiter = rateLimit({
@@ -257,6 +360,14 @@ const emailStatusLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many email status checks. Please wait a few minutes and try again.' },
+});
+
+const messageLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many messages sent. Please wait a few minutes and try again.' },
 });
 
 const studentAuthLimiter = rateLimit({
@@ -289,7 +400,7 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-function requireStudent(req, res, next) {
+async function requireStudent(req, res, next) {
   if (!JWT_SECRET) {
     res.status(503).json({ message: 'Student login is not configured. Set JWT_SECRET in server/.env.' });
     return;
@@ -304,7 +415,13 @@ function requireStudent(req, res, next) {
 
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    req.student = { id: payload.id, email: payload.email, name: payload.name };
+    const accounts = await readJsonFile('student-accounts');
+    const account = accounts.find((item) => item.id === payload.id);
+    if (!account) {
+      res.status(401).json({ message: 'This account no longer exists. Please sign in again.' });
+      return;
+    }
+    req.student = { id: account.id, email: account.email, name: account.name };
     next();
   } catch {
     res.status(401).json({ message: 'Your session has expired. Please sign in again.' });
@@ -315,6 +432,22 @@ function cleanText(value, maxLength = 500) {
   return String(value || '')
     .replace(/[\u0000-\u001f\u007f]/g, ' ')
     .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
+function cleanMultilineText(value, maxLength = 4000) {
+  const NL = String.fromCharCode(10);
+  const CR = String.fromCharCode(13);
+  const tripleNL = NL + NL + NL;
+  return String(value || '')
+    .split('')
+    .filter((ch) => ch !== CR)
+    .join('')
+    .split(NL)
+    .map((line) => line.split('').filter((ch) => ch.charCodeAt(0) >= 32).join('').replace(/ {2,}/g, ' ').trim())
+    .join(NL)
+    .split(tripleNL).join(NL + NL)
     .trim()
     .slice(0, maxLength);
 }
@@ -624,6 +757,15 @@ const STORAGE_FILES = {
   roles: path.join(DATA_DIR, 'roles.json'),
   'activity-logs': path.join(DATA_DIR, 'activity-logs.json'),
   reports: path.join(DATA_DIR, 'reports.json'),
+  announcements: path.join(DATA_DIR, 'announcements.json'),
+  'upcoming-items': path.join(DATA_DIR, 'upcoming-items.json'),
+  'course-curricula': path.join(DATA_DIR, 'course-curricula.json'),
+  'lesson-progress': path.join(DATA_DIR, 'lesson-progress.json'),
+  'student-messages': path.join(DATA_DIR, 'student-messages.json'),
+  'course-assignments': path.join(DATA_DIR, 'course-assignments.json'),
+  'assignment-submissions': path.join(DATA_DIR, 'assignment-submissions.json'),
+  'course-quizzes': path.join(DATA_DIR, 'course-quizzes.json'),
+  'quiz-attempts': path.join(DATA_DIR, 'quiz-attempts.json'),
 };
 
 // One-time migration: if DATA_DIR was pointed at a new location (e.g. to survive
@@ -666,6 +808,14 @@ async function migrateLegacyDataFiles() {
 }
 
 await migrateLegacyDataFiles();
+await refreshCoursePriceCache();
+
+try {
+  const storedSettings = await readJsonFile('settings');
+  smtpOverride = storedSettings[0] || null;
+} catch (error) {
+  console.error('Could not load stored settings for SMTP override:', error);
+}
 
 async function readJsonFile(key) {
   const filePath = STORAGE_FILES[key];
@@ -714,7 +864,7 @@ function createAdminId(prefix) {
 }
 
 function defaultAdminCourses() {
-  return [...COURSE_PRICES.entries()].map(([title, price]) => ({
+  return [...DEFAULT_COURSE_PRICES.entries()].map(([title, price]) => ({
     id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
     title,
     price,
@@ -733,6 +883,20 @@ function defaultAdminPackages() {
 async function readCoursesForAdminWrite() {
   const stored = await readJsonFile('courses');
   return stored.length ? stored : defaultAdminCourses();
+}
+
+async function refreshCoursePriceCache() {
+  try {
+    const courses = await readCoursesForAdminWrite();
+    const next = new Map();
+    for (const course of courses) {
+      if (!course?.title || course.status === 'Inactive') continue;
+      next.set(course.title, Number(course.price) || 0);
+    }
+    COURSE_PRICES = next;
+  } catch (error) {
+    console.error('Could not refresh course price cache:', error);
+  }
 }
 
 async function readPackagesForAdminWrite() {
@@ -842,18 +1006,20 @@ function smtpPassword() {
 }
 
 function smtpConfig(overrides = {}) {
-  const host = envValue('SMTP_HOST', 'MAIL_HOST', 'EMAIL_HOST') || 'smtp.hostinger.com';
-  const port = Number(envValue('SMTP_PORT', 'MAIL_PORT') || 465);
-  const secureValue = envValue('SMTP_SECURE', 'MAIL_SECURE') || 'true';
-  const user = envValue('SMTP_USER', 'SMTP_USERNAME', 'MAIL_USER', 'MAIL_USERNAME', 'EMAIL_USER');
-  const pass = smtpPassword();
+  const host = smtpOverride?.smtpHost || envValue('SMTP_HOST', 'MAIL_HOST', 'EMAIL_HOST') || 'smtp.hostinger.com';
+  const port = Number(smtpOverride?.smtpPort || envValue('SMTP_PORT', 'MAIL_PORT') || 465);
+  const secureValue = smtpOverride && typeof smtpOverride.smtpSecure === 'boolean'
+    ? smtpOverride.smtpSecure
+    : (envValue('SMTP_SECURE', 'MAIL_SECURE') || 'true');
+  const user = smtpOverride?.smtpUser || envValue('SMTP_USER', 'SMTP_USERNAME', 'MAIL_USER', 'MAIL_USERNAME', 'EMAIL_USER');
+  const pass = smtpOverride?.smtpPass || smtpPassword();
   return {
     host: overrides.host || host,
     port: overrides.port || port,
     secure: typeof overrides.secure === 'boolean' ? overrides.secure : String(secureValue).toLowerCase() === 'true',
     user,
     pass,
-    from: envValue('SMTP_FROM') || `"${BUSINESS_NAME}" <${user}>`,
+    from: smtpOverride?.smtpFrom || envValue('SMTP_FROM') || `"${BUSINESS_NAME}" <${user}>`,
   };
 }
 
@@ -1863,7 +2029,7 @@ app.get('/api/email/status', emailStatusLimiter, async (_req, res) => {
   }
 });
 
-app.post('/api/admin/auth/login', async (req, res) => {
+app.post('/api/admin/auth/login', adminAuthLimiter, async (req, res) => {
   const email = cleanText(req.body?.email, 180).toLowerCase();
   const password = String(req.body?.password || '');
   const rememberMe = Boolean(req.body?.rememberMe);
@@ -2123,10 +2289,50 @@ app.patch('/api/admin/enrollments/:id/status', requireAdmin, async (req, res) =>
   }
 });
 
+app.get('/api/courses', async (_req, res) => {
+  try {
+    const stored = await readJsonFile('courses');
+    const list = (stored.length ? stored : defaultAdminCourses())
+      .filter((course) => course.status !== 'Inactive')
+      .map((course) => ({
+        title: course.title,
+        price: Number(course.price) || 0,
+        duration: course.duration || '',
+        category: course.category || '',
+        image: course.image || '',
+      }));
+    res.json({ courses: list });
+  } catch (error) {
+    console.error('Public courses read failed:', error);
+    res.status(500).json({ message: 'Could not load courses.' });
+  }
+});
+
+function courseInstructorName(instructors, targetCourseTitle) {
+  const match = instructors.find((inst) => (Array.isArray(inst.courses) ? inst.courses : []).includes(targetCourseTitle));
+  return match?.name || '';
+}
+
+async function syncInstructorCourseLink(targetCourseTitle, instructorName) {
+  const instructors = await readJsonFile('instructors');
+  let changed = false;
+  for (const inst of instructors) {
+    const courses = Array.isArray(inst.courses) ? inst.courses : [];
+    const has = courses.includes(targetCourseTitle);
+    const shouldHave = Boolean(instructorName) && inst.name === instructorName;
+    if (shouldHave && !has) { inst.courses = [...courses, targetCourseTitle]; changed = true; }
+    else if (!shouldHave && has) { inst.courses = courses.filter((c) => c !== targetCourseTitle); changed = true; }
+  }
+  if (changed) await writeJsonFile('instructors', instructors);
+}
+
 app.get('/api/admin/courses', requireAdmin, async (_req, res) => {
   try {
     const stored = await readJsonFile('courses');
-    res.json({ courses: stored.length ? stored : defaultAdminCourses() });
+    const courses = stored.length ? stored : defaultAdminCourses();
+    const instructors = await readJsonFile('instructors');
+    const withInstructor = courses.map((c) => ({ ...c, instructorName: courseInstructorName(instructors, c.title) }));
+    res.json({ courses: withInstructor });
   } catch (error) {
     console.error('Admin courses read failed:', error);
     res.status(500).json({ message: 'Could not load courses.' });
@@ -2135,15 +2341,18 @@ app.get('/api/admin/courses', requireAdmin, async (_req, res) => {
 
 app.post('/api/admin/courses', requireAdmin, async (req, res) => {
   try {
+    const { instructorName, ...rest } = req.body || {};
     const courses = await readCoursesForAdminWrite();
     const course = {
       id: `course-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       createdAt: new Date().toISOString(),
-      ...req.body,
+      ...rest,
     };
     courses.push(course);
     await writeJsonFile('courses', courses);
-    res.status(201).json({ course });
+    await refreshCoursePriceCache();
+    if (instructorName !== undefined) await syncInstructorCourseLink(course.title, instructorName);
+    res.status(201).json({ course: { ...course, instructorName: instructorName || '' } });
   } catch (error) {
     console.error('Admin course create failed:', error);
     res.status(500).json({ message: 'Could not create course.' });
@@ -2152,15 +2361,19 @@ app.post('/api/admin/courses', requireAdmin, async (req, res) => {
 
 app.put('/api/admin/courses/:id', requireAdmin, async (req, res) => {
   try {
+    const { instructorName, ...rest } = req.body || {};
     const courses = await readCoursesForAdminWrite();
     const index = courses.findIndex((c) => c.id === req.params.id);
     if (index === -1) {
       res.status(404).json({ message: 'Course not found.' });
       return;
     }
-    courses[index] = { ...courses[index], ...req.body, id: req.params.id, updatedAt: new Date().toISOString() };
+    courses[index] = { ...courses[index], ...rest, id: req.params.id, updatedAt: new Date().toISOString() };
     await writeJsonFile('courses', courses);
-    res.json({ course: courses[index] });
+    await refreshCoursePriceCache();
+    if (instructorName !== undefined) await syncInstructorCourseLink(courses[index].title, instructorName);
+    const instructors = await readJsonFile('instructors');
+    res.json({ course: { ...courses[index], instructorName: courseInstructorName(instructors, courses[index].title) } });
   } catch (error) {
     console.error('Admin course update failed:', error);
     res.status(500).json({ message: 'Could not update course.' });
@@ -2177,10 +2390,62 @@ app.delete('/api/admin/courses/:id', requireAdmin, async (req, res) => {
     }
     const deleted = courses.splice(index, 1)[0];
     await writeJsonFile('courses', courses);
+    await refreshCoursePriceCache();
+    if (deleted.image) {
+      const oldPath = path.join(COURSE_IMAGE_DIR, path.basename(deleted.image));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
     res.json({ course: deleted });
   } catch (error) {
     console.error('Admin course delete failed:', error);
     res.status(500).json({ message: 'Could not delete course.' });
+  }
+});
+
+app.post('/api/admin/courses/:id/image', requireAdmin, (req, res) => {
+  uploadCourseImage.single('image')(req, res, async (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: 'File is too large. Maximum size is 4MB.' });
+      return res.status(400).json({ message: err.message || 'File upload failed.' });
+    }
+    if (!req.file) { res.status(400).json({ message: 'No file provided.' }); return; }
+    try {
+      const courses = await readCoursesForAdminWrite();
+      const index = courses.findIndex((c) => c.id === req.params.id);
+      if (index === -1) {
+        fs.unlinkSync(req.file.path);
+        res.status(404).json({ message: 'Course not found.' });
+        return;
+      }
+      if (courses[index].image) {
+        const oldPath = path.join(COURSE_IMAGE_DIR, path.basename(courses[index].image));
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      courses[index] = { ...courses[index], image: `/uploads/course-images/${req.file.filename}`, updatedAt: new Date().toISOString() };
+      await writeJsonFile('courses', courses);
+      res.json({ course: courses[index] });
+    } catch (error) {
+      console.error('Course image upload failed:', error);
+      res.status(500).json({ message: 'Could not save the image.' });
+    }
+  });
+});
+
+app.delete('/api/admin/courses/:id/image', requireAdmin, async (req, res) => {
+  try {
+    const courses = await readCoursesForAdminWrite();
+    const index = courses.findIndex((c) => c.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Course not found.' }); return; }
+    if (courses[index].image) {
+      const oldPath = path.join(COURSE_IMAGE_DIR, path.basename(courses[index].image));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+    courses[index] = { ...courses[index], image: '' };
+    await writeJsonFile('courses', courses);
+    res.json({ course: courses[index] });
+  } catch (error) {
+    console.error('Course image remove failed:', error);
+    res.status(500).json({ message: 'Could not remove the image.' });
   }
 });
 
@@ -2238,10 +2503,77 @@ app.delete('/api/admin/packages/:id', requireAdmin, async (req, res) => {
     }
     const deleted = packages.splice(index, 1)[0];
     await writeJsonFile('packages', packages);
+    if (deleted.image) {
+      const oldPath = path.join(PACKAGE_IMAGE_DIR, path.basename(deleted.image));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
     res.json({ package: deleted });
   } catch (error) {
     console.error('Admin package delete failed:', error);
     res.status(500).json({ message: 'Could not delete package.' });
+  }
+});
+
+app.post('/api/admin/packages/:id/image', requireAdmin, (req, res) => {
+  uploadPackageImage.single('image')(req, res, async (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: 'File is too large. Maximum size is 4MB.' });
+      return res.status(400).json({ message: err.message || 'File upload failed.' });
+    }
+    if (!req.file) { res.status(400).json({ message: 'No file provided.' }); return; }
+    try {
+      const packages = await readPackagesForAdminWrite();
+      const index = packages.findIndex((p) => p.id === req.params.id);
+      if (index === -1) {
+        fs.unlinkSync(req.file.path);
+        res.status(404).json({ message: 'Package not found.' });
+        return;
+      }
+      if (packages[index].image) {
+        const oldPath = path.join(PACKAGE_IMAGE_DIR, path.basename(packages[index].image));
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      packages[index] = { ...packages[index], image: `/uploads/package-images/${req.file.filename}`, updatedAt: new Date().toISOString() };
+      await writeJsonFile('packages', packages);
+      res.json({ package: packages[index] });
+    } catch (error) {
+      console.error('Package image upload failed:', error);
+      res.status(500).json({ message: 'Could not save the image.' });
+    }
+  });
+});
+
+app.delete('/api/admin/packages/:id/image', requireAdmin, async (req, res) => {
+  try {
+    const packages = await readPackagesForAdminWrite();
+    const index = packages.findIndex((p) => p.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Package not found.' }); return; }
+    if (packages[index].image) {
+      const oldPath = path.join(PACKAGE_IMAGE_DIR, path.basename(packages[index].image));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+    packages[index] = { ...packages[index], image: '' };
+    await writeJsonFile('packages', packages);
+    res.json({ package: packages[index] });
+  } catch (error) {
+    console.error('Package image remove failed:', error);
+    res.status(500).json({ message: 'Could not remove the image.' });
+  }
+});
+
+app.get('/api/packages', async (_req, res) => {
+  try {
+    const stored = await readJsonFile('packages');
+    const list = (stored.length ? stored : defaultAdminPackages())
+      .filter((item) => item.status !== 'Inactive')
+      .map((item) => ({
+        name: item.name,
+        image: item.image || '',
+      }));
+    res.json({ packages: list });
+  } catch (error) {
+    console.error('Public packages read failed:', error);
+    res.status(500).json({ message: 'Could not load packages.' });
   }
 });
 
@@ -2379,6 +2711,62 @@ app.delete('/api/admin/students/:id', requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Admin student delete failed:', error);
     res.status(500).json({ message: 'Could not delete student.' });
+  }
+});
+
+// ---- Admin: student portal accounts (login accounts, not the enrollment CRM above) ----
+
+app.get('/api/admin/student-accounts', requireAdmin, async (_req, res) => {
+  try {
+    const accounts = await readJsonFile('student-accounts');
+    res.json({
+      studentAccounts: accounts
+        .map((account) => ({
+          id: account.id,
+          name: account.name,
+          email: account.email,
+          phone: account.phone || '',
+          avatarUrl: account.avatarUrl || '',
+          authProvider: account.googleId ? 'Google' : 'Password',
+          createdAt: account.createdAt,
+        }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
+    });
+  } catch (error) {
+    console.error('Admin student accounts read failed:', error);
+    res.status(500).json({ message: 'Could not load student accounts.' });
+  }
+});
+
+app.delete('/api/admin/student-accounts/:id', requireAdmin, async (req, res) => {
+  try {
+    const accounts = await readJsonFile('student-accounts');
+    const index = accounts.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Student account not found.' }); return; }
+    const deleted = accounts.splice(index, 1)[0];
+    await writeJsonFile('student-accounts', accounts);
+    await recordActivity('Deleted student portal account', req.params.id, deleted.name);
+    res.json({ studentAccount: { id: deleted.id, name: deleted.name, email: deleted.email } });
+  } catch (error) {
+    console.error('Admin student account delete failed:', error);
+    res.status(500).json({ message: 'Could not delete student account.' });
+  }
+});
+
+app.post('/api/admin/student-accounts/:id/reset-password', requireAdmin, async (req, res) => {
+  try {
+    const accounts = await readJsonFile('student-accounts');
+    const index = accounts.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Student account not found.' }); return; }
+
+    const tempPassword = Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 6).toUpperCase();
+    accounts[index] = { ...accounts[index], passwordHash: await bcrypt.hash(tempPassword, 10) };
+    await writeJsonFile('student-accounts', accounts);
+    await recordActivity('Reset student portal password', req.params.id, accounts[index].name);
+    res.json({ message: 'Password reset. Share the temporary password with the student.', temporaryPassword: tempPassword });
+  } catch (error) {
+    console.error('Admin student account password reset failed:', error);
+    res.status(500).json({ message: 'Could not reset password.' });
   }
 });
 
@@ -2531,6 +2919,48 @@ app.delete('/api/admin/discounts/:id', requireAdmin, async (req, res) => {
   }
 });
 
+function publicInstructor(item) {
+  return {
+    id: item.id,
+    name: item.name,
+    role: cleanText(item.role, 80),
+    position: item.position || '',
+    professionalTitle: item.professionalTitle || '',
+    bio: item.bio || '',
+    image: item.image || '',
+    courses: Array.isArray(item.courses) ? item.courses : [],
+    expertise: Array.isArray(item.expertise) ? item.expertise : [],
+    experienceYears: item.experienceYears || '',
+    certifications: Array.isArray(item.certifications) ? item.certifications : [],
+    teachingPhilosophy: item.teachingPhilosophy || '',
+    mission: item.mission || '',
+    motto: item.motto || '',
+  };
+}
+
+app.get('/api/instructors', async (_req, res) => {
+  try {
+    const instructors = await readJsonFile('instructors');
+    const list = instructors.filter((item) => item.name).map(publicInstructor);
+    res.json({ instructors: list });
+  } catch (error) {
+    console.error('Public instructors read failed:', error);
+    res.status(500).json({ message: 'Could not load instructors.' });
+  }
+});
+
+app.get('/api/instructors/:id', async (req, res) => {
+  try {
+    const instructors = await readJsonFile('instructors');
+    const instructor = instructors.find((item) => item.id === req.params.id && item.name);
+    if (!instructor) { res.status(404).json({ message: 'Instructor not found.' }); return; }
+    res.json({ instructor: publicInstructor(instructor) });
+  } catch (error) {
+    console.error('Public instructor read failed:', error);
+    res.status(500).json({ message: 'Could not load this instructor.' });
+  }
+});
+
 app.get('/api/admin/instructors', requireAdmin, async (_req, res) => {
   try {
     const instructors = await readJsonFile('instructors');
@@ -2585,10 +3015,61 @@ app.delete('/api/admin/instructors/:id', requireAdmin, async (req, res) => {
     }
     const deleted = instructors.splice(index, 1)[0];
     await writeJsonFile('instructors', instructors);
+    if (deleted.image) {
+      const oldPath = path.join(INSTRUCTOR_AVATAR_DIR, path.basename(deleted.image));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
     res.json({ instructor: deleted });
   } catch (error) {
     console.error('Admin instructor delete failed:', error);
     res.status(500).json({ message: 'Could not delete instructor.' });
+  }
+});
+
+app.post('/api/admin/instructors/:id/avatar', requireAdmin, (req, res) => {
+  uploadInstructorAvatar.single('avatar')(req, res, async (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: 'File is too large. Maximum size is 2MB.' });
+      return res.status(400).json({ message: err.message || 'File upload failed.' });
+    }
+    if (!req.file) { res.status(400).json({ message: 'No file provided.' }); return; }
+    try {
+      const instructors = await readJsonFile('instructors');
+      const index = instructors.findIndex((i) => i.id === req.params.id);
+      if (index === -1) {
+        fs.unlinkSync(req.file.path);
+        res.status(404).json({ message: 'Instructor not found.' });
+        return;
+      }
+      if (instructors[index].image) {
+        const oldPath = path.join(INSTRUCTOR_AVATAR_DIR, path.basename(instructors[index].image));
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      instructors[index] = { ...instructors[index], image: `/uploads/instructor-avatars/${req.file.filename}`, updatedAt: new Date().toISOString() };
+      await writeJsonFile('instructors', instructors);
+      res.json({ instructor: instructors[index] });
+    } catch (error) {
+      console.error('Instructor avatar upload failed:', error);
+      res.status(500).json({ message: 'Could not save the photo.' });
+    }
+  });
+});
+
+app.delete('/api/admin/instructors/:id/avatar', requireAdmin, async (req, res) => {
+  try {
+    const instructors = await readJsonFile('instructors');
+    const index = instructors.findIndex((i) => i.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Instructor not found.' }); return; }
+    if (instructors[index].image) {
+      const oldPath = path.join(INSTRUCTOR_AVATAR_DIR, path.basename(instructors[index].image));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+    instructors[index] = { ...instructors[index], image: '' };
+    await writeJsonFile('instructors', instructors);
+    res.json({ instructor: instructors[index] });
+  } catch (error) {
+    console.error('Instructor avatar remove failed:', error);
+    res.status(500).json({ message: 'Could not remove the photo.' });
   }
 });
 
@@ -2690,19 +3171,32 @@ app.delete('/api/admin/messages/:id', requireAdmin, async (req, res) => {
   }
 });
 
+function publicSettings(stored) {
+  const config = smtpConfig();
+  const base = stored || {
+    academyName: BUSINESS_NAME,
+    supportEmail: ADMIN_EMAIL,
+    primaryWhatsApp: WHATSAPP_PRIMARY,
+    currency: 'FCFA',
+    timezone: 'Africa/Lagos',
+    emailNotifications: true,
+  };
+  const { smtpPass: _omit, ...rest } = base;
+  return {
+    ...rest,
+    smtpHost: config.host,
+    smtpPort: config.port,
+    smtpSecure: config.secure,
+    smtpUser: config.user,
+    smtpFrom: config.from,
+    smtpPassSet: Boolean(config.pass),
+  };
+}
+
 app.get('/api/admin/settings', requireAdmin, async (_req, res) => {
   try {
     const stored = await readJsonFile('settings');
-    res.json({
-      settings: stored[0] || {
-        academyName: BUSINESS_NAME,
-        supportEmail: ADMIN_EMAIL,
-        primaryWhatsApp: WHATSAPP_PRIMARY,
-        currency: 'FCFA',
-        timezone: 'Africa/Lagos',
-        emailNotifications: true,
-      },
-    });
+    res.json({ settings: publicSettings(stored[0]) });
   } catch (error) {
     console.error('Admin settings read failed:', error);
     res.status(500).json({ message: 'Could not load settings.' });
@@ -2711,23 +3205,66 @@ app.get('/api/admin/settings', requireAdmin, async (_req, res) => {
 
 app.put('/api/admin/settings', requireAdmin, async (req, res) => {
   try {
+    const stored = await readJsonFile('settings');
+    const existing = stored[0] || {};
+
+    const sanitized = sanitizePayload(req.body, {
+      academyName: { max: 120 },
+      supportEmail: { max: 180 },
+      primaryWhatsApp: { max: 40 },
+      currency: { max: 12 },
+      timezone: { max: 80 },
+      emailNotifications: { type: 'boolean' },
+      smtpHost: { max: 120 },
+      smtpPort: { type: 'number' },
+      smtpUser: { max: 180 },
+      smtpFrom: { max: 200 },
+    });
+
+    const smtpSecureRaw = req.body?.smtpSecure;
+    const smtpSecure = smtpSecureRaw === undefined ? (existing.smtpSecure ?? true) : (smtpSecureRaw === true || smtpSecureRaw === 'true');
+    const newPass = cleanText(req.body?.smtpPass, 200);
+
     const settings = {
-      ...sanitizePayload(req.body, {
-        academyName: { max: 120 },
-        supportEmail: { max: 180 },
-        primaryWhatsApp: { max: 40 },
-        currency: { max: 12 },
-        timezone: { max: 80 },
-        emailNotifications: { type: 'boolean' },
-      }),
+      ...existing,
+      ...sanitized,
+      smtpSecure,
+      smtpPass: newPass || existing.smtpPass || '',
       updatedAt: new Date().toISOString(),
     };
+    if (!settings.smtpPort) settings.smtpPort = existing.smtpPort || 465;
+
     await writeJsonFile('settings', [settings]);
+    smtpOverride = settings;
     await recordActivity('Updated settings', 'settings', settings.academyName);
-    res.json({ settings });
+    res.json({ settings: publicSettings(settings) });
   } catch (error) {
     console.error('Admin settings update failed:', error);
     res.status(500).json({ message: 'Could not update settings.' });
+  }
+});
+
+app.post('/api/admin/settings/test-email', requireAdmin, async (req, res) => {
+  try {
+    const recipient = cleanText(req.body?.recipient, 180) || smtpConfig().user;
+    if (!isEmail(recipient)) { res.status(400).json({ message: 'Enter a valid recipient email address.' }); return; }
+
+    const { transporter, config } = await createVerifiedTransporter() || {};
+    if (!transporter) {
+      res.status(503).json({ message: 'SMTP is not configured. Fill in the email settings first.' });
+      return;
+    }
+    await transporter.sendMail({
+      from: config.from,
+      to: recipient,
+      subject: `${BUSINESS_NAME} SMTP test email`,
+      text: `This is a test email from the ${BUSINESS_NAME} admin panel. If you received this, your email settings are working.`,
+    });
+    transporter.close();
+    res.json({ message: `Test email sent to ${recipient}.` });
+  } catch (error) {
+    console.error('SMTP test email failed:', error);
+    res.status(502).json({ message: explainSmtpError(error, error.smtpLastConfig) });
   }
 });
 
@@ -2997,7 +3534,7 @@ function signStudentToken(account) {
 }
 
 function publicStudentAccount(account) {
-  return { id: account.id, name: account.name, email: account.email, phone: account.phone || '' };
+  return { id: account.id, name: account.name, email: account.email, phone: account.phone || '', avatarUrl: account.avatarUrl || '' };
 }
 
 app.post('/api/student/auth/register', studentAuthLimiter, async (req, res) => {
@@ -3052,7 +3589,7 @@ app.post('/api/student/auth/login', studentAuthLimiter, async (req, res) => {
     const password = String(req.body?.password || '');
     const accounts = await readJsonFile('student-accounts');
     const account = accounts.find((item) => item.email === email);
-    const passwordMatches = account && (await bcrypt.compare(password, account.passwordHash));
+    const passwordMatches = account && account.passwordHash && (await bcrypt.compare(password, account.passwordHash));
 
     if (!passwordMatches) {
       res.status(401).json({ message: 'Invalid email or password.' });
@@ -3063,6 +3600,64 @@ app.post('/api/student/auth/login', studentAuthLimiter, async (req, res) => {
   } catch (error) {
     console.error('Student login failed:', error);
     res.status(500).json({ message: 'Could not sign you in. Please try again.' });
+  }
+});
+
+app.post('/api/student/auth/google', studentAuthLimiter, async (req, res) => {
+  try {
+    if (!JWT_SECRET) {
+      res.status(503).json({ message: 'Student login is not configured. Set JWT_SECRET in server/.env.' });
+      return;
+    }
+    if (!googleAuthClient) {
+      res.status(503).json({ message: 'Google sign-in is not configured. Set GOOGLE_CLIENT_ID in server/.env.' });
+      return;
+    }
+
+    const credential = String(req.body?.credential || '');
+    if (!credential) { res.status(400).json({ message: 'Missing Google credential.' }); return; }
+
+    let payload;
+    try {
+      const ticket = await googleAuthClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID });
+      payload = ticket.getPayload();
+    } catch {
+      res.status(401).json({ message: 'Could not verify your Google sign-in. Please try again.' });
+      return;
+    }
+
+    const email = String(payload?.email || '').toLowerCase();
+    if (!payload?.email_verified || !isEmail(email)) {
+      res.status(401).json({ message: 'Your Google account email could not be verified.' });
+      return;
+    }
+    const name = cleanText(payload?.name || email.split('@')[0], 90);
+    const googleId = String(payload?.sub || '');
+
+    const accounts = await readJsonFile('student-accounts');
+    let account = accounts.find((item) => item.email === email);
+
+    if (!account) {
+      account = {
+        id: `STU-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+        name,
+        email,
+        phone: '',
+        passwordHash: null,
+        googleId,
+        createdAt: new Date().toISOString(),
+      };
+      accounts.push(account);
+      await writeJsonFile('student-accounts', accounts);
+    } else if (account.googleId !== googleId) {
+      account.googleId = googleId;
+      await writeJsonFile('student-accounts', accounts);
+    }
+
+    res.json({ token: signStudentToken(account), student: publicStudentAccount(account) });
+  } catch (error) {
+    console.error('Student Google sign-in failed:', error);
+    res.status(500).json({ message: 'Could not sign you in with Google. Please try again.' });
   }
 });
 
@@ -3102,6 +3697,1364 @@ app.get('/api/student/payments', requireStudent, async (req, res) => {
   } catch (error) {
     console.error('Student payments read failed:', error);
     res.status(500).json({ message: 'Could not load your payments.' });
+  }
+});
+
+app.patch('/api/student/profile', requireStudent, async (req, res) => {
+  try {
+    const name = cleanText(req.body?.name, 90);
+    const phone = cleanText(req.body?.phone, 40);
+    if (name.length < 2) { res.status(400).json({ message: 'Your name is required.' }); return; }
+
+    const accounts = await readJsonFile('student-accounts');
+    const index = accounts.findIndex((item) => item.id === req.student.id);
+    if (index === -1) { res.status(404).json({ message: 'Account not found.' }); return; }
+
+    accounts[index] = { ...accounts[index], name, phone };
+    await writeJsonFile('student-accounts', accounts);
+    res.json({ student: publicStudentAccount(accounts[index]) });
+  } catch (error) {
+    console.error('Student profile update failed:', error);
+    res.status(500).json({ message: 'Could not update your profile.' });
+  }
+});
+
+app.post('/api/student/profile/avatar', requireStudent, (req, res) => {
+  uploadStudentAvatar.single('avatar')(req, res, async (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: 'File is too large. Maximum size is 2MB.' });
+      return res.status(400).json({ message: err.message || 'File upload failed.' });
+    }
+    if (!req.file) return res.status(400).json({ message: 'No file provided.' });
+    try {
+      const accounts = await readJsonFile('student-accounts');
+      const index = accounts.findIndex((item) => item.id === req.student.id);
+      if (index === -1) {
+        fs.unlinkSync(req.file.path);
+        res.status(404).json({ message: 'Account not found.' });
+        return;
+      }
+      if (accounts[index].avatarUrl) {
+        const oldPath = path.join(STUDENT_AVATAR_DIR, path.basename(accounts[index].avatarUrl));
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      const avatarUrl = `/uploads/student-avatars/${req.file.filename}`;
+      accounts[index] = { ...accounts[index], avatarUrl };
+      await writeJsonFile('student-accounts', accounts);
+      res.json({ student: publicStudentAccount(accounts[index]) });
+    } catch (error) {
+      console.error('Student avatar upload failed:', error);
+      res.status(500).json({ message: 'Could not save your photo.' });
+    }
+  });
+});
+
+app.delete('/api/student/profile/avatar', requireStudent, async (req, res) => {
+  try {
+    const accounts = await readJsonFile('student-accounts');
+    const index = accounts.findIndex((item) => item.id === req.student.id);
+    if (index === -1) { res.status(404).json({ message: 'Account not found.' }); return; }
+
+    if (accounts[index].avatarUrl) {
+      const oldPath = path.join(STUDENT_AVATAR_DIR, path.basename(accounts[index].avatarUrl));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+    accounts[index] = { ...accounts[index], avatarUrl: '' };
+    await writeJsonFile('student-accounts', accounts);
+    res.json({ student: publicStudentAccount(accounts[index]) });
+  } catch (error) {
+    console.error('Student avatar remove failed:', error);
+    res.status(500).json({ message: 'Could not remove your photo.' });
+  }
+});
+
+app.patch('/api/student/password', requireStudent, async (req, res) => {
+  try {
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
+    if (newPassword.length < 6) { res.status(400).json({ message: 'New password must be at least 6 characters.' }); return; }
+
+    const accounts = await readJsonFile('student-accounts');
+    const index = accounts.findIndex((item) => item.id === req.student.id);
+    if (index === -1) { res.status(404).json({ message: 'Account not found.' }); return; }
+
+    const account = accounts[index];
+    if (!account.passwordHash) {
+      res.status(400).json({ message: 'This account signs in with Google and has no password to change.' });
+      return;
+    }
+    const currentMatches = await bcrypt.compare(currentPassword, account.passwordHash);
+    if (!currentMatches) { res.status(401).json({ message: 'Current password is incorrect.' }); return; }
+
+    accounts[index] = { ...account, passwordHash: await bcrypt.hash(newPassword, 10) };
+    await writeJsonFile('student-accounts', accounts);
+    res.json({ message: 'Password updated.' });
+  } catch (error) {
+    console.error('Student password update failed:', error);
+    res.status(500).json({ message: 'Could not update your password.' });
+  }
+});
+
+function courseStageFromOrderStatus(status) {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'completed') return { status: 'Completed', progress: 100 };
+  if (normalized === 'cancelled' || normalized === 'refunded') return { status: normalized === 'refunded' ? 'Refunded' : 'Cancelled', progress: 0 };
+  if (normalized === 'paid' || normalized === 'confirmed') return { status: 'In Progress', progress: 55 };
+  return { status: 'Pending Payment', progress: 10 };
+}
+
+const ORDER_STAGE_RANK = { 'Pending Payment': 0, Cancelled: 0, Refunded: 0, 'In Progress': 1, Completed: 2 };
+const CURRICULUM_UNLOCKED_STATUSES = new Set(['In Progress', 'Completed']);
+
+async function studentCourseAccess(studentEmail, targetCourseTitle) {
+  const orders = await readOrders();
+  const myOrders = orders.filter((order) => (order.email || '').toLowerCase() === studentEmail);
+
+  let best = null;
+  for (const order of myOrders) {
+    const enrichedTitles = (order.courses || []).map((course) => courseTitle(course));
+    if (!enrichedTitles.includes(targetCourseTitle)) continue;
+    const stage = courseStageFromOrderStatus(order.status);
+    if (!best || ORDER_STAGE_RANK[stage.status] > ORDER_STAGE_RANK[best.status]) best = stage;
+  }
+  if (!best) return { enrolled: false, status: null, progress: 0, unlocked: false };
+  return { enrolled: true, status: best.status, progress: best.progress, unlocked: CURRICULUM_UNLOCKED_STATUSES.has(best.status) };
+}
+
+function curriculumModules(curriculum) {
+  return Array.isArray(curriculum?.modules) ? curriculum.modules : [];
+}
+
+function moduleLessons(module) {
+  return Array.isArray(module?.lessons) ? module.lessons : [];
+}
+
+function flattenLessons(curriculum) {
+  const lessons = [];
+  for (const module of curriculumModules(curriculum)) {
+    for (const lesson of moduleLessons(module)) {
+      lessons.push({ ...lesson, moduleId: module.id, moduleTitle: module.title });
+    }
+  }
+  return lessons;
+}
+
+function lessonProgressKey(studentId, courseTitle) {
+  return `${studentId}::${courseTitle}`;
+}
+
+function deriveCurriculumProgress(curriculum, completedLessonIds) {
+  const completed = new Set(completedLessonIds || []);
+  const flatLessons = flattenLessons(curriculum);
+  let currentAssigned = false;
+  const lessonStates = {};
+
+  for (const lesson of flatLessons) {
+    if (completed.has(lesson.id)) {
+      lessonStates[lesson.id] = 'completed';
+    } else if (!currentAssigned) {
+      lessonStates[lesson.id] = 'in-progress';
+      currentAssigned = true;
+    } else {
+      lessonStates[lesson.id] = 'locked';
+    }
+  }
+
+  const moduleStates = curriculumModules(curriculum).map((module) => {
+    const ids = moduleLessons(module).map((lesson) => lesson.id);
+    const completedCount = ids.filter((id) => lessonStates[id] === 'completed').length;
+    let status = 'Not Started';
+    if (completedCount === ids.length && ids.length > 0) status = 'Completed';
+    else if (ids.some((id) => lessonStates[id] === 'completed' || lessonStates[id] === 'in-progress')) status = 'In Progress';
+    return {
+      id: module.id,
+      completedCount,
+      totalCount: ids.length,
+      percent: ids.length ? Math.round((completedCount / ids.length) * 100) : 0,
+      status,
+    };
+  });
+
+  const totalCount = flatLessons.length;
+  const completedCount = flatLessons.filter((lesson) => lessonStates[lesson.id] === 'completed').length;
+  const inProgressCount = flatLessons.filter((lesson) => lessonStates[lesson.id] === 'in-progress').length;
+  const notStartedCount = totalCount - completedCount - inProgressCount;
+
+  return {
+    lessonStates,
+    moduleStates,
+    stats: {
+      totalLessons: totalCount,
+      completedLessons: completedCount,
+      inProgressLessons: inProgressCount,
+      notStartedLessons: notStartedCount,
+      percent: totalCount ? Math.round((completedCount / totalCount) * 100) : 0,
+    },
+  };
+}
+
+app.get('/api/course-curricula/:courseTitle', async (req, res) => {
+  try {
+    const curricula = await readJsonFile('course-curricula');
+    const curriculum = curricula.find((item) => item.courseTitle === req.params.courseTitle);
+    if (!curriculum) { res.status(404).json({ message: 'No curriculum found for this course yet.' }); return; }
+    res.json({ curriculum });
+  } catch (error) {
+    console.error('Curriculum read failed:', error);
+    res.status(500).json({ message: 'Could not load curriculum.' });
+  }
+});
+
+app.get('/api/admin/course-curricula', requireAdmin, async (_req, res) => {
+  try {
+    const curricula = await readJsonFile('course-curricula');
+    res.json({ curricula });
+  } catch (error) {
+    console.error('Admin curricula read failed:', error);
+    res.status(500).json({ message: 'Could not load curricula.' });
+  }
+});
+
+function validateCurriculumShape(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return 'Curriculum body must be a JSON object.';
+  if (body.modules !== undefined && !Array.isArray(body.modules)) return '"modules" must be an array.';
+  for (const module of body.modules || []) {
+    if (!module || typeof module !== 'object') return 'Each module must be an object.';
+    if (!module.id) return 'Each module needs an "id".';
+    if (module.lessons !== undefined && !Array.isArray(module.lessons)) return `Module "${module.id}" has a "lessons" field that must be an array.`;
+    for (const lesson of module.lessons || []) {
+      if (!lesson || typeof lesson !== 'object') return `Module "${module.id}" has a lesson that is not an object.`;
+      if (!lesson.id) return `Every lesson in module "${module.id}" needs an "id".`;
+      if (lesson.topics !== undefined && !Array.isArray(lesson.topics)) return `Lesson "${lesson.id}" has a "topics" field that must be an array.`;
+    }
+  }
+  return '';
+}
+
+app.put('/api/admin/course-curricula/:courseTitle', requireAdmin, async (req, res) => {
+  try {
+    const validationError = validateCurriculumShape(req.body);
+    if (validationError) {
+      res.status(400).json({ message: validationError });
+      return;
+    }
+    const curricula = await readJsonFile('course-curricula');
+    const index = curricula.findIndex((item) => item.courseTitle === req.params.courseTitle);
+    const now = new Date().toISOString();
+    const saved = {
+      ...req.body,
+      courseTitle: req.params.courseTitle,
+      createdAt: index === -1 ? now : curricula[index].createdAt,
+      updatedAt: now,
+    };
+    if (index === -1) curricula.push(saved);
+    else curricula[index] = saved;
+    await writeJsonFile('course-curricula', curricula);
+    await recordActivity('Saved course curriculum', req.params.courseTitle, `${saved.modules?.length || 0} modules`);
+    res.json({ curriculum: saved });
+  } catch (error) {
+    console.error('Admin curriculum save failed:', error);
+    res.status(500).json({ message: 'Could not save curriculum.' });
+  }
+});
+
+app.delete('/api/admin/course-curricula/:courseTitle', requireAdmin, async (req, res) => {
+  try {
+    const curricula = await readJsonFile('course-curricula');
+    const index = curricula.findIndex((item) => item.courseTitle === req.params.courseTitle);
+    if (index === -1) { res.status(404).json({ message: 'Curriculum not found.' }); return; }
+    const deleted = curricula.splice(index, 1)[0];
+    await writeJsonFile('course-curricula', curricula);
+    await recordActivity('Deleted course curriculum', req.params.courseTitle, '');
+    res.json({ curriculum: deleted });
+  } catch (error) {
+    console.error('Admin curriculum delete failed:', error);
+    res.status(500).json({ message: 'Could not delete curriculum.' });
+  }
+});
+
+app.get('/api/student/courses/:courseTitle/curriculum', requireStudent, async (req, res) => {
+  try {
+    const access = await studentCourseAccess(req.student.email, req.params.courseTitle);
+    if (!access.enrolled) {
+      res.status(403).json({ message: 'You are not enrolled in this course.', locked: true, reason: 'not_enrolled' });
+      return;
+    }
+    if (!access.unlocked) {
+      const reason = access.status === 'Cancelled' || access.status === 'Refunded' ? 'cancelled' : 'pending_payment';
+      const message = reason === 'cancelled'
+        ? 'This enrollment was cancelled, so the course content is not available.'
+        : "Your payment for this course hasn't been confirmed yet. You'll get full access as soon as it's validated.";
+      res.status(402).json({ message, locked: true, reason, courseTitle: req.params.courseTitle, status: access.status });
+      return;
+    }
+
+    const curricula = await readJsonFile('course-curricula');
+    const curriculum = curricula.find((item) => item.courseTitle === req.params.courseTitle);
+    if (!curriculum) { res.status(404).json({ message: 'No curriculum found for this course yet.' }); return; }
+
+    const progressList = await readJsonFile('lesson-progress');
+    const key = lessonProgressKey(req.student.id, req.params.courseTitle);
+    const record = progressList.find((item) => item.key === key);
+    const completedLessonIds = record?.completedLessonIds || [];
+
+    const derived = deriveCurriculumProgress(curriculum, completedLessonIds);
+    res.json({ curriculum, completedLessonIds, ...derived });
+  } catch (error) {
+    console.error('Student curriculum read failed:', error);
+    res.status(500).json({ message: 'Could not load this course.' });
+  }
+});
+
+app.get('/api/admin/lesson-progress/:studentId/:courseTitle', requireAdmin, async (req, res) => {
+  try {
+    const progressList = await readJsonFile('lesson-progress');
+    const key = lessonProgressKey(req.params.studentId, req.params.courseTitle);
+    const record = progressList.find((item) => item.key === key);
+    res.json({ completedLessonIds: record?.completedLessonIds || [] });
+  } catch (error) {
+    console.error('Admin lesson progress read failed:', error);
+    res.status(500).json({ message: 'Could not load lesson progress.' });
+  }
+});
+
+app.put('/api/admin/lesson-progress/:studentId/:courseTitle', requireAdmin, async (req, res) => {
+  try {
+    const completedLessonIds = Array.isArray(req.body?.completedLessonIds)
+      ? req.body.completedLessonIds.map((id) => String(id))
+      : [];
+
+    const progressList = await readJsonFile('lesson-progress');
+    const key = lessonProgressKey(req.params.studentId, req.params.courseTitle);
+    const index = progressList.findIndex((item) => item.key === key);
+    const record = {
+      key,
+      studentId: req.params.studentId,
+      courseTitle: req.params.courseTitle,
+      completedLessonIds,
+      updatedAt: new Date().toISOString(),
+    };
+    if (index === -1) progressList.push(record);
+    else progressList[index] = record;
+    await writeJsonFile('lesson-progress', progressList);
+    await recordActivity('Updated lesson progress', req.params.studentId, `${req.params.courseTitle}: ${completedLessonIds.length} completed`);
+    res.json({ progress: record });
+  } catch (error) {
+    console.error('Admin lesson progress save failed:', error);
+    res.status(500).json({ message: 'Could not save lesson progress.' });
+  }
+});
+
+// ---- Assignments ----
+
+function publicAssignmentSubmission(sub) {
+  if (!sub) return null;
+  return {
+    id: sub.id,
+    assignmentId: sub.assignmentId,
+    studentId: sub.studentId,
+    studentName: sub.studentName,
+    studentEmail: sub.studentEmail,
+    fileUrl: sub.fileUrl,
+    fileName: sub.fileName,
+    notes: sub.notes || '',
+    status: sub.status,
+    grade: sub.grade ?? null,
+    feedback: sub.feedback || '',
+    submittedAt: sub.submittedAt,
+    gradedAt: sub.gradedAt || null,
+  };
+}
+
+app.get('/api/admin/assignments', requireAdmin, async (req, res) => {
+  try {
+    const assignments = await readJsonFile('course-assignments');
+    const submissions = await readJsonFile('assignment-submissions');
+    const filtered = req.query.courseTitle
+      ? assignments.filter((item) => item.courseTitle === req.query.courseTitle)
+      : assignments;
+    const withCounts = filtered.map((item) => {
+      const subs = submissions.filter((sub) => sub.assignmentId === item.id);
+      return {
+        ...item,
+        submissionCount: subs.length,
+        gradedCount: subs.filter((sub) => sub.status === 'graded').length,
+      };
+    });
+    res.json({ assignments: withCounts });
+  } catch (error) {
+    console.error('Admin assignments read failed:', error);
+    res.status(500).json({ message: 'Could not load assignments.' });
+  }
+});
+
+app.post('/api/admin/assignments', requireAdmin, async (req, res) => {
+  try {
+    const courseTitle = cleanText(req.body?.courseTitle, 120);
+    const title = cleanText(req.body?.title, 160);
+    if (!courseTitle || !title) {
+      res.status(400).json({ message: 'Course and title are required.' });
+      return;
+    }
+    const assignment = {
+      id: `assign-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      courseTitle,
+      title,
+      instructions: cleanMultilineText(req.body?.instructions, 4000),
+      dueDate: cleanText(req.body?.dueDate, 40),
+      maxScore: Number(req.body?.maxScore) || 100,
+      createdAt: new Date().toISOString(),
+    };
+    const assignments = await readJsonFile('course-assignments');
+    assignments.push(assignment);
+    await writeJsonFile('course-assignments', assignments);
+    res.status(201).json({ assignment });
+  } catch (error) {
+    console.error('Admin assignment create failed:', error);
+    res.status(500).json({ message: 'Could not create assignment.' });
+  }
+});
+
+app.put('/api/admin/assignments/:id', requireAdmin, async (req, res) => {
+  try {
+    const assignments = await readJsonFile('course-assignments');
+    const index = assignments.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Assignment not found.' }); return; }
+    const courseTitle = cleanText(req.body?.courseTitle, 120) || assignments[index].courseTitle;
+    const title = cleanText(req.body?.title, 160) || assignments[index].title;
+    assignments[index] = {
+      ...assignments[index],
+      courseTitle,
+      title,
+      instructions: req.body?.instructions !== undefined ? cleanMultilineText(req.body.instructions, 4000) : assignments[index].instructions,
+      dueDate: req.body?.dueDate !== undefined ? cleanText(req.body.dueDate, 40) : assignments[index].dueDate,
+      maxScore: req.body?.maxScore !== undefined ? (Number(req.body.maxScore) || 100) : assignments[index].maxScore,
+      updatedAt: new Date().toISOString(),
+    };
+    await writeJsonFile('course-assignments', assignments);
+    res.json({ assignment: assignments[index] });
+  } catch (error) {
+    console.error('Admin assignment update failed:', error);
+    res.status(500).json({ message: 'Could not update assignment.' });
+  }
+});
+
+app.delete('/api/admin/assignments/:id', requireAdmin, async (req, res) => {
+  try {
+    const assignments = await readJsonFile('course-assignments');
+    const index = assignments.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Assignment not found.' }); return; }
+    const [deleted] = assignments.splice(index, 1);
+    await writeJsonFile('course-assignments', assignments);
+
+    const submissions = await readJsonFile('assignment-submissions');
+    const remaining = [];
+    for (const sub of submissions) {
+      if (sub.assignmentId !== deleted.id) { remaining.push(sub); continue; }
+      if (sub.fileUrl) {
+        const filePath = path.join(ASSIGNMENT_UPLOAD_DIR, path.basename(sub.fileUrl));
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+    }
+    await writeJsonFile('assignment-submissions', remaining);
+    res.json({ assignment: deleted });
+  } catch (error) {
+    console.error('Admin assignment delete failed:', error);
+    res.status(500).json({ message: 'Could not delete assignment.' });
+  }
+});
+
+app.get('/api/admin/assignments/:id/submissions', requireAdmin, async (req, res) => {
+  try {
+    const submissions = await readJsonFile('assignment-submissions');
+    const thread = submissions.filter((sub) => sub.assignmentId === req.params.id);
+    res.json({ submissions: thread.map(publicAssignmentSubmission) });
+  } catch (error) {
+    console.error('Admin assignment submissions read failed:', error);
+    res.status(500).json({ message: 'Could not load submissions.' });
+  }
+});
+
+app.put('/api/admin/assignment-submissions/:id', requireAdmin, async (req, res) => {
+  try {
+    const submissions = await readJsonFile('assignment-submissions');
+    const index = submissions.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Submission not found.' }); return; }
+    const grade = req.body?.grade === '' || req.body?.grade === null || req.body?.grade === undefined
+      ? null
+      : Number(req.body.grade);
+    submissions[index] = {
+      ...submissions[index],
+      grade,
+      feedback: cleanText(req.body?.feedback, 2000),
+      status: 'graded',
+      gradedAt: new Date().toISOString(),
+    };
+    await writeJsonFile('assignment-submissions', submissions);
+    await recordActivity('Graded assignment', submissions[index].studentName, `${submissions[index].studentEmail}: ${grade ?? '—'} points`);
+    res.json({ submission: publicAssignmentSubmission(submissions[index]) });
+  } catch (error) {
+    console.error('Admin assignment grading failed:', error);
+    res.status(500).json({ message: 'Could not save the grade.' });
+  }
+});
+
+app.get('/api/admin/student-assignments/:studentId/:courseTitle', requireAdmin, async (req, res) => {
+  try {
+    const assignments = await readJsonFile('course-assignments');
+    const courseAssignments = assignments.filter((item) => item.courseTitle === req.params.courseTitle);
+    const submissions = await readJsonFile('assignment-submissions');
+    const mine = submissions.filter((sub) => sub.studentId === req.params.studentId);
+
+    const list = courseAssignments.map((item) => ({
+      ...item,
+      submission: publicAssignmentSubmission(mine.find((sub) => sub.assignmentId === item.id) || null),
+    }));
+    res.json({ assignments: list });
+  } catch (error) {
+    console.error('Admin student-assignment lookup failed:', error);
+    res.status(500).json({ message: 'Could not load this student\'s assignments.' });
+  }
+});
+
+app.get('/api/student/assignments', requireStudent, async (req, res) => {
+  try {
+    const orders = await readOrders();
+    const studentEmail = (req.student.email || '').toLowerCase();
+    const myOrders = orders.filter((order) => (order.email || '').toLowerCase() === studentEmail);
+
+    const unlockedTitles = new Set();
+    for (const order of myOrders) {
+      const stage = courseStageFromOrderStatus(order.status);
+      if (!CURRICULUM_UNLOCKED_STATUSES.has(stage.status)) continue;
+      for (const course of order.courses || []) unlockedTitles.add(courseTitle(course));
+    }
+
+    const assignments = await readJsonFile('course-assignments');
+    const relevant = assignments.filter((item) => unlockedTitles.has(item.courseTitle));
+    const submissions = await readJsonFile('assignment-submissions');
+    const mine = submissions.filter((sub) => sub.studentId === req.student.id);
+
+    const list = relevant
+      .map((item) => ({
+        ...item,
+        submission: publicAssignmentSubmission(mine.find((sub) => sub.assignmentId === item.id) || null),
+      }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json({ assignments: list });
+  } catch (error) {
+    console.error('Student assignments (all courses) read failed:', error);
+    res.status(500).json({ message: 'Could not load your assignments.' });
+  }
+});
+
+app.get('/api/student/courses/:courseTitle/assignments', requireStudent, async (req, res) => {
+  try {
+    const access = await studentCourseAccess(req.student.email, req.params.courseTitle);
+    if (!access.enrolled) {
+      res.status(403).json({ message: 'You are not enrolled in this course.', locked: true, reason: 'not_enrolled' });
+      return;
+    }
+    if (!access.unlocked) {
+      const reason = access.status === 'Cancelled' || access.status === 'Refunded' ? 'cancelled' : 'pending_payment';
+      const message = reason === 'cancelled'
+        ? 'This enrollment was cancelled, so assignments are not available.'
+        : "Your payment for this course hasn't been confirmed yet. You'll get access to assignments as soon as it's validated.";
+      res.status(402).json({ message, locked: true, reason, courseTitle: req.params.courseTitle, status: access.status });
+      return;
+    }
+
+    const assignments = await readJsonFile('course-assignments');
+    const courseAssignments = assignments.filter((item) => item.courseTitle === req.params.courseTitle);
+    const submissions = await readJsonFile('assignment-submissions');
+    const mine = submissions.filter((sub) => sub.studentId === req.student.id);
+
+    const list = courseAssignments.map((item) => ({
+      ...item,
+      submission: publicAssignmentSubmission(mine.find((sub) => sub.assignmentId === item.id) || null),
+    }));
+    res.json({ assignments: list });
+  } catch (error) {
+    console.error('Student assignments read failed:', error);
+    res.status(500).json({ message: 'Could not load assignments.' });
+  }
+});
+
+app.post('/api/student/assignments/:id/submit', requireStudent, (req, res) => {
+  uploadAssignmentFile.single('file')(req, res, async (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: 'File is too large. Maximum size is 15MB.' });
+      return res.status(400).json({ message: err.message || 'File upload failed.' });
+    }
+    try {
+      const assignments = await readJsonFile('course-assignments');
+      const assignment = assignments.find((item) => item.id === req.params.id);
+      if (!assignment) {
+        if (req.file) fs.unlinkSync(req.file.path);
+        res.status(404).json({ message: 'Assignment not found.' });
+        return;
+      }
+
+      const access = await studentCourseAccess(req.student.email, assignment.courseTitle);
+      if (!access.enrolled || !access.unlocked) {
+        if (req.file) fs.unlinkSync(req.file.path);
+        res.status(403).json({ message: 'You do not have access to this assignment.' });
+        return;
+      }
+      if (!req.file && !cleanText(req.body?.notes, 2000)) {
+        res.status(400).json({ message: 'Attach a file or add notes before submitting.' });
+        return;
+      }
+
+      const submissions = await readJsonFile('assignment-submissions');
+      const index = submissions.findIndex((sub) => sub.assignmentId === assignment.id && sub.studentId === req.student.id);
+
+      if (index !== -1 && req.file && submissions[index].fileUrl) {
+        const oldPath = path.join(ASSIGNMENT_UPLOAD_DIR, path.basename(submissions[index].fileUrl));
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+
+      const record = {
+        id: index !== -1 ? submissions[index].id : `sub-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        assignmentId: assignment.id,
+        courseTitle: assignment.courseTitle,
+        studentId: req.student.id,
+        studentName: req.student.name,
+        studentEmail: req.student.email,
+        fileUrl: req.file ? `/uploads/assignment-submissions/${req.file.filename}` : (index !== -1 ? submissions[index].fileUrl : ''),
+        fileName: req.file ? req.file.originalname : (index !== -1 ? submissions[index].fileName : ''),
+        notes: cleanText(req.body?.notes, 2000),
+        status: 'submitted',
+        grade: null,
+        feedback: '',
+        submittedAt: new Date().toISOString(),
+        gradedAt: null,
+      };
+      if (index === -1) submissions.push(record);
+      else submissions[index] = record;
+      await writeJsonFile('assignment-submissions', submissions);
+      res.json({ submission: publicAssignmentSubmission(record) });
+    } catch (error) {
+      console.error('Student assignment submit failed:', error);
+      if (req.file) { try { fs.unlinkSync(req.file.path); } catch {} }
+      res.status(500).json({ message: 'Could not submit your assignment.' });
+    }
+  });
+});
+
+// ---- Quizzes ----
+
+const DEFAULT_QUIZ_GRADING_SCALE = [
+  { min: 90, max: 100, label: 'Excellent (A)' },
+  { min: 80, max: 89, label: 'Very Good (B+)' },
+  { min: 70, max: 79, label: 'Good (B)' },
+  { min: 60, max: 69, label: 'Fair (C)' },
+  { min: 0, max: 59, label: 'Needs Improvement' },
+];
+
+function quizGradeLabel(percent) {
+  const match = DEFAULT_QUIZ_GRADING_SCALE.find((row) => percent >= row.min && percent <= row.max);
+  return match?.label || '';
+}
+
+function quizQuestions(quiz) {
+  return Array.isArray(quiz?.questions) ? quiz.questions : [];
+}
+
+function quizTotalMarks(quiz) {
+  return Number(quiz?.totalMarks) || quizQuestions(quiz).reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
+}
+
+function publicQuizSummary(quiz) {
+  return {
+    id: quiz.id,
+    courseTitle: quiz.courseTitle,
+    courseCode: quiz.courseCode || '',
+    title: quiz.title,
+    duration: quiz.duration || '',
+    totalMarks: quizTotalMarks(quiz),
+    passingScore: Number(quiz.passingScore) || 0,
+    questionCount: quizQuestions(quiz).length,
+    assignedStudentId: quiz.assignedStudentId || '',
+    assignedStudentName: quiz.assignedStudentName || '',
+    createdAt: quiz.createdAt,
+  };
+}
+
+function publicQuizForTaking(quiz) {
+  return {
+    ...publicQuizSummary(quiz),
+    learningOutcomes: Array.isArray(quiz.learningOutcomes) ? quiz.learningOutcomes : [],
+    questions: quizQuestions(quiz).map((q) => ({ id: q.id, text: q.text, options: q.options || [], marks: Number(q.marks) || 0 })),
+  };
+}
+
+function publicQuizAttempt(attempt) {
+  if (!attempt) return null;
+  return {
+    id: attempt.id,
+    quizId: attempt.quizId,
+    studentId: attempt.studentId,
+    studentName: attempt.studentName,
+    studentEmail: attempt.studentEmail,
+    score: attempt.score,
+    totalMarks: attempt.totalMarks,
+    percent: attempt.percent,
+    passed: attempt.passed,
+    grade: attempt.grade,
+    answers: attempt.answers,
+    breakdown: attempt.breakdown,
+    submittedAt: attempt.submittedAt,
+  };
+}
+
+function gradeQuiz(quiz, answers) {
+  const questions = quizQuestions(quiz);
+  const totalMarks = quizTotalMarks(quiz);
+  let score = 0;
+  const breakdown = questions.map((q) => {
+    const marks = Number(q.marks) || 0;
+    const hasAnswer = answers && Object.prototype.hasOwnProperty.call(answers, q.id);
+    const selectedIndex = hasAnswer ? Number(answers[q.id]) : null;
+    const correct = selectedIndex === Number(q.correctIndex);
+    if (correct) score += marks;
+    return {
+      id: q.id,
+      text: q.text,
+      options: q.options || [],
+      correctIndex: Number(q.correctIndex),
+      selectedIndex,
+      correct,
+      marks,
+    };
+  });
+  const percent = totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0;
+  const passed = percent >= (Number(quiz.passingScore) || 0);
+  return { score, totalMarks, percent, passed, grade: quizGradeLabel(percent), breakdown };
+}
+
+function validateQuizQuestions(questions) {
+  if (!Array.isArray(questions) || !questions.length) return 'Add at least one question.';
+  for (const q of questions) {
+    if (!q?.text || !Array.isArray(q.options) || q.options.filter(Boolean).length < 2) {
+      return 'Every question needs text and at least 2 options.';
+    }
+    const correctIndex = Number(q.correctIndex);
+    if (Number.isNaN(correctIndex) || correctIndex < 0 || correctIndex >= q.options.length) {
+      return `Question "${q.text}" needs a valid correct answer.`;
+    }
+  }
+  return '';
+}
+
+function cleanQuizQuestions(questions) {
+  return questions.map((q, i) => ({
+    id: q.id || `q${i + 1}`,
+    text: cleanText(q.text, 500),
+    options: q.options.map((opt) => cleanText(opt, 200)),
+    correctIndex: Number(q.correctIndex),
+    marks: Number(q.marks) || 2,
+  }));
+}
+
+app.get('/api/admin/quizzes', requireAdmin, async (req, res) => {
+  try {
+    const quizzes = await readJsonFile('course-quizzes');
+    const attempts = await readJsonFile('quiz-attempts');
+    const filtered = req.query.courseTitle ? quizzes.filter((item) => item.courseTitle === req.query.courseTitle) : quizzes;
+    const withCounts = filtered.map((item) => {
+      const mine = attempts.filter((a) => a.quizId === item.id);
+      return { ...item, attemptCount: mine.length, passCount: mine.filter((a) => a.passed).length };
+    });
+    res.json({ quizzes: withCounts });
+  } catch (error) {
+    console.error('Admin quizzes read failed:', error);
+    res.status(500).json({ message: 'Could not load quizzes.' });
+  }
+});
+
+app.post('/api/admin/quizzes', requireAdmin, async (req, res) => {
+  try {
+    const courseTitle = cleanText(req.body?.courseTitle, 120);
+    const title = cleanText(req.body?.title, 160);
+    if (!courseTitle || !title) { res.status(400).json({ message: 'Course and title are required.' }); return; }
+    const questionError = validateQuizQuestions(req.body?.questions);
+    if (questionError) { res.status(400).json({ message: questionError }); return; }
+
+    const cleanQuestions = cleanQuizQuestions(req.body.questions);
+    const quiz = {
+      id: `quiz-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      courseTitle,
+      courseCode: cleanText(req.body?.courseCode, 40),
+      title,
+      duration: cleanText(req.body?.duration, 40),
+      passingScore: Number(req.body?.passingScore) || 70,
+      totalMarks: Number(req.body?.totalMarks) || cleanQuestions.reduce((sum, q) => sum + q.marks, 0),
+      learningOutcomes: Array.isArray(req.body?.learningOutcomes) ? req.body.learningOutcomes.map((item) => cleanText(item, 300)) : [],
+      assignedStudentId: cleanText(req.body?.assignedStudentId, 80),
+      assignedStudentName: cleanText(req.body?.assignedStudentName, 120),
+      questions: cleanQuestions,
+      createdAt: new Date().toISOString(),
+    };
+    const quizzes = await readJsonFile('course-quizzes');
+    quizzes.push(quiz);
+    await writeJsonFile('course-quizzes', quizzes);
+    res.status(201).json({ quiz });
+  } catch (error) {
+    console.error('Admin quiz create failed:', error);
+    res.status(500).json({ message: 'Could not create quiz.' });
+  }
+});
+
+app.put('/api/admin/quizzes/:id', requireAdmin, async (req, res) => {
+  try {
+    const quizzes = await readJsonFile('course-quizzes');
+    const index = quizzes.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Quiz not found.' }); return; }
+
+    const questions = req.body?.questions !== undefined ? req.body.questions : quizzes[index].questions;
+    const questionError = validateQuizQuestions(questions);
+    if (questionError) { res.status(400).json({ message: questionError }); return; }
+    const cleanQuestions = cleanQuizQuestions(questions);
+
+    quizzes[index] = {
+      ...quizzes[index],
+      courseTitle: cleanText(req.body?.courseTitle, 120) || quizzes[index].courseTitle,
+      courseCode: req.body?.courseCode !== undefined ? cleanText(req.body.courseCode, 40) : quizzes[index].courseCode,
+      title: cleanText(req.body?.title, 160) || quizzes[index].title,
+      duration: req.body?.duration !== undefined ? cleanText(req.body.duration, 40) : quizzes[index].duration,
+      passingScore: req.body?.passingScore !== undefined ? (Number(req.body.passingScore) || 70) : quizzes[index].passingScore,
+      totalMarks: req.body?.totalMarks !== undefined ? (Number(req.body.totalMarks) || 0) : quizzes[index].totalMarks,
+      learningOutcomes: Array.isArray(req.body?.learningOutcomes)
+        ? req.body.learningOutcomes.map((item) => cleanText(item, 300))
+        : quizzes[index].learningOutcomes,
+      assignedStudentId: req.body?.assignedStudentId !== undefined ? cleanText(req.body.assignedStudentId, 80) : quizzes[index].assignedStudentId,
+      assignedStudentName: req.body?.assignedStudentName !== undefined ? cleanText(req.body.assignedStudentName, 120) : quizzes[index].assignedStudentName,
+      questions: cleanQuestions,
+      updatedAt: new Date().toISOString(),
+    };
+    await writeJsonFile('course-quizzes', quizzes);
+    res.json({ quiz: quizzes[index] });
+  } catch (error) {
+    console.error('Admin quiz update failed:', error);
+    res.status(500).json({ message: 'Could not update quiz.' });
+  }
+});
+
+app.delete('/api/admin/quizzes/:id', requireAdmin, async (req, res) => {
+  try {
+    const quizzes = await readJsonFile('course-quizzes');
+    const index = quizzes.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Quiz not found.' }); return; }
+    const [deleted] = quizzes.splice(index, 1);
+    await writeJsonFile('course-quizzes', quizzes);
+
+    const attempts = await readJsonFile('quiz-attempts');
+    const remaining = attempts.filter((a) => a.quizId !== deleted.id);
+    await writeJsonFile('quiz-attempts', remaining);
+    res.json({ quiz: deleted });
+  } catch (error) {
+    console.error('Admin quiz delete failed:', error);
+    res.status(500).json({ message: 'Could not delete quiz.' });
+  }
+});
+
+app.get('/api/admin/quizzes/:id/attempts', requireAdmin, async (req, res) => {
+  try {
+    const attempts = await readJsonFile('quiz-attempts');
+    const thread = attempts.filter((a) => a.quizId === req.params.id);
+    res.json({ attempts: thread.map(publicQuizAttempt) });
+  } catch (error) {
+    console.error('Admin quiz attempts read failed:', error);
+    res.status(500).json({ message: 'Could not load attempts.' });
+  }
+});
+
+app.get('/api/student/quizzes', requireStudent, async (req, res) => {
+  try {
+    const orders = await readOrders();
+    const studentEmail = (req.student.email || '').toLowerCase();
+    const myOrders = orders.filter((order) => (order.email || '').toLowerCase() === studentEmail);
+
+    const unlockedTitles = new Set();
+    for (const order of myOrders) {
+      const stage = courseStageFromOrderStatus(order.status);
+      if (!CURRICULUM_UNLOCKED_STATUSES.has(stage.status)) continue;
+      for (const course of order.courses || []) unlockedTitles.add(courseTitle(course));
+    }
+
+    const quizzes = await readJsonFile('course-quizzes');
+    const relevant = quizzes.filter((item) => {
+      if (!unlockedTitles.has(item.courseTitle)) return false;
+      if (item.assignedStudentId && item.assignedStudentId !== req.student.id) return false;
+      return true;
+    });
+    const attempts = await readJsonFile('quiz-attempts');
+    const mine = attempts.filter((a) => a.studentId === req.student.id);
+
+    const list = relevant
+      .map((item) => ({
+        ...publicQuizSummary(item),
+        attempt: publicQuizAttempt(mine.find((a) => a.quizId === item.id) || null),
+      }))
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    res.json({ quizzes: list });
+  } catch (error) {
+    console.error('Student quizzes read failed:', error);
+    res.status(500).json({ message: 'Could not load your quizzes.' });
+  }
+});
+
+app.get('/api/student/quizzes/:id', requireStudent, async (req, res) => {
+  try {
+    const quizzes = await readJsonFile('course-quizzes');
+    const quiz = quizzes.find((item) => item.id === req.params.id);
+    if (!quiz) { res.status(404).json({ message: 'Quiz not found.' }); return; }
+    if (quiz.assignedStudentId && quiz.assignedStudentId !== req.student.id) {
+      res.status(403).json({ message: 'This quiz was assigned to a different student.' });
+      return;
+    }
+
+    const access = await studentCourseAccess(req.student.email, quiz.courseTitle);
+    if (!access.enrolled) {
+      res.status(403).json({ message: 'You are not enrolled in this course.', locked: true, reason: 'not_enrolled' });
+      return;
+    }
+    if (!access.unlocked) {
+      const reason = access.status === 'Cancelled' || access.status === 'Refunded' ? 'cancelled' : 'pending_payment';
+      const message = reason === 'cancelled'
+        ? 'This enrollment was cancelled, so this quiz is not available.'
+        : "Your payment for this course hasn't been confirmed yet. You'll get access to this quiz as soon as it's validated.";
+      res.status(402).json({ message, locked: true, reason, courseTitle: quiz.courseTitle, status: access.status });
+      return;
+    }
+
+    const attempts = await readJsonFile('quiz-attempts');
+    const mine = attempts.find((a) => a.quizId === quiz.id && a.studentId === req.student.id);
+    res.json({ quiz: publicQuizForTaking(quiz), attempt: publicQuizAttempt(mine || null) });
+  } catch (error) {
+    console.error('Student quiz read failed:', error);
+    res.status(500).json({ message: 'Could not load this quiz.' });
+  }
+});
+
+app.post('/api/student/quizzes/:id/submit', requireStudent, async (req, res) => {
+  try {
+    const quizzes = await readJsonFile('course-quizzes');
+    const quiz = quizzes.find((item) => item.id === req.params.id);
+    if (!quiz) { res.status(404).json({ message: 'Quiz not found.' }); return; }
+    if (quiz.assignedStudentId && quiz.assignedStudentId !== req.student.id) {
+      res.status(403).json({ message: 'This quiz was assigned to a different student.' });
+      return;
+    }
+
+    const access = await studentCourseAccess(req.student.email, quiz.courseTitle);
+    if (!access.enrolled || !access.unlocked) {
+      res.status(403).json({ message: 'You do not have access to this quiz.' });
+      return;
+    }
+
+    const answers = req.body?.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
+    const result = gradeQuiz(quiz, answers);
+
+    const attempts = await readJsonFile('quiz-attempts');
+    const index = attempts.findIndex((a) => a.quizId === quiz.id && a.studentId === req.student.id);
+    const record = {
+      id: index !== -1 ? attempts[index].id : `attempt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      quizId: quiz.id,
+      courseTitle: quiz.courseTitle,
+      studentId: req.student.id,
+      studentName: req.student.name,
+      studentEmail: req.student.email,
+      answers,
+      ...result,
+      submittedAt: new Date().toISOString(),
+    };
+    if (index === -1) attempts.push(record);
+    else attempts[index] = record;
+    await writeJsonFile('quiz-attempts', attempts);
+    res.json({ attempt: publicQuizAttempt(record) });
+  } catch (error) {
+    console.error('Student quiz submit failed:', error);
+    res.status(500).json({ message: 'Could not submit your quiz.' });
+  }
+});
+
+// ---- Student <-> Admin direct messaging ----
+
+app.get('/api/student/messages', requireStudent, async (req, res) => {
+  try {
+    const all = await readJsonFile('student-messages');
+    const thread = all.filter((item) => item.studentId === req.student.id);
+
+    let changed = false;
+    for (const item of thread) {
+      if (item.sender === 'admin' && !item.readByStudent) {
+        item.readByStudent = true;
+        changed = true;
+      }
+    }
+    if (changed) await writeJsonFile('student-messages', all);
+
+    thread.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    res.json({ messages: thread });
+  } catch (error) {
+    console.error('Student messages read failed:', error);
+    res.status(500).json({ message: 'Could not load your messages.' });
+  }
+});
+
+app.get('/api/student/messages/unread-count', requireStudent, async (req, res) => {
+  try {
+    const all = await readJsonFile('student-messages');
+    const count = all.filter((item) => item.studentId === req.student.id && item.sender === 'admin' && !item.readByStudent).length;
+    res.json({ count });
+  } catch (error) {
+    console.error('Student unread message count failed:', error);
+    res.status(500).json({ message: 'Could not load your messages.' });
+  }
+});
+
+app.post('/api/student/messages', requireStudent, messageLimiter, async (req, res) => {
+  try {
+    const body = cleanText(req.body?.body, 2000);
+    if (!body) { res.status(400).json({ message: 'Message cannot be empty.' }); return; }
+
+    const all = await readJsonFile('student-messages');
+    const record = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      studentId: req.student.id,
+      studentEmail: req.student.email,
+      studentName: req.student.name,
+      sender: 'student',
+      body,
+      createdAt: new Date().toISOString(),
+      readByStudent: true,
+      readByAdmin: false,
+    };
+    all.push(record);
+    await writeJsonFile('student-messages', all);
+    res.status(201).json({ message: record });
+  } catch (error) {
+    console.error('Student message send failed:', error);
+    res.status(500).json({ message: 'Could not send your message.' });
+  }
+});
+
+app.get('/api/admin/messages/conversations', requireAdmin, async (_req, res) => {
+  try {
+    const all = await readJsonFile('student-messages');
+    const byStudent = new Map();
+    for (const item of all) {
+      const existing = byStudent.get(item.studentId);
+      if (!existing || new Date(item.createdAt) > new Date(existing.lastMessageAt)) {
+        byStudent.set(item.studentId, {
+          studentId: item.studentId,
+          studentName: item.studentName,
+          studentEmail: item.studentEmail,
+          lastMessage: item.body,
+          lastMessageSender: item.sender,
+          lastMessageAt: item.createdAt,
+        });
+      }
+    }
+    const conversations = [...byStudent.values()].map((conv) => ({
+      ...conv,
+      unreadCount: all.filter((item) => item.studentId === conv.studentId && item.sender === 'student' && !item.readByAdmin).length,
+    })).sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
+    res.json({ conversations });
+  } catch (error) {
+    console.error('Admin conversations read failed:', error);
+    res.status(500).json({ message: 'Could not load conversations.' });
+  }
+});
+
+app.get('/api/admin/messages/:studentId', requireAdmin, async (req, res) => {
+  try {
+    const all = await readJsonFile('student-messages');
+    const thread = all.filter((item) => item.studentId === req.params.studentId);
+
+    let changed = false;
+    for (const item of thread) {
+      if (item.sender === 'student' && !item.readByAdmin) {
+        item.readByAdmin = true;
+        changed = true;
+      }
+    }
+    if (changed) await writeJsonFile('student-messages', all);
+
+    thread.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    res.json({ messages: thread });
+  } catch (error) {
+    console.error('Admin message thread read failed:', error);
+    res.status(500).json({ message: 'Could not load this conversation.' });
+  }
+});
+
+app.post('/api/admin/messages/:studentId', requireAdmin, messageLimiter, async (req, res) => {
+  try {
+    const body = cleanText(req.body?.body, 2000);
+    if (!body) { res.status(400).json({ message: 'Message cannot be empty.' }); return; }
+
+    const accounts = await readJsonFile('student-accounts');
+    const account = accounts.find((item) => item.id === req.params.studentId);
+    if (!account) { res.status(404).json({ message: 'Student account not found.' }); return; }
+
+    const all = await readJsonFile('student-messages');
+    const record = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      studentId: account.id,
+      studentEmail: account.email,
+      studentName: account.name,
+      sender: 'admin',
+      body,
+      createdAt: new Date().toISOString(),
+      readByStudent: false,
+      readByAdmin: true,
+    };
+    all.push(record);
+    await writeJsonFile('student-messages', all);
+    await recordActivity('Replied to student', account.id, account.name);
+    res.status(201).json({ message: record });
+  } catch (error) {
+    console.error('Admin message send failed:', error);
+    res.status(500).json({ message: 'Could not send your reply.' });
+  }
+});
+
+app.get('/api/student/dashboard', requireStudent, async (req, res) => {
+  try {
+    const orders = await readOrders();
+    const myOrders = orders
+      .filter((order) => (order.email || '').toLowerCase() === req.student.email)
+      .map(enrichOrder)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const paymentsRaw = await readJsonFile('payments');
+    const myPayments = mergeByKey(derivePaymentsFromOrders(myOrders), paymentsRaw, (payment) => payment.enrollmentId || payment.id)
+      .filter((payment) => myOrders.some((order) => order.id === payment.enrollmentId));
+
+    const courseMap = new Map();
+    for (const order of myOrders) {
+      const stage = courseStageFromOrderStatus(order.status);
+      for (const course of order.courses || []) {
+        const key = course.title;
+        const existing = courseMap.get(key);
+        if (!existing || ORDER_STAGE_RANK[stage.status] > ORDER_STAGE_RANK[existing.status]) {
+          courseMap.set(key, { title: key, ...stage });
+        }
+      }
+    }
+    const packageMap = new Map();
+    for (const order of myOrders) {
+      const stage = courseStageFromOrderStatus(order.status);
+      for (const item of order.packages || []) {
+        const key = item.name;
+        const existing = packageMap.get(key);
+        if (!existing || ORDER_STAGE_RANK[stage.status] > ORDER_STAGE_RANK[existing.status]) {
+          packageMap.set(key, { name: key, duration: item.duration || '', courses: item.courses || [], ...stage });
+        }
+      }
+    }
+
+    const totalOrders = myOrders.length;
+    const completedOrders = myOrders.filter((order) => String(order.status).toLowerCase() === 'completed').length;
+    const pendingOrders = myOrders.filter((order) => ['pending', 'confirmed'].includes(String(order.status).toLowerCase())).length;
+    const paidPayments = myPayments.filter((payment) => payment.status === 'Paid').length;
+    const totalPaid = myPayments.filter((payment) => payment.status === 'Paid').reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    const enrollmentProgress = totalOrders ? Math.round((completedOrders / totalOrders) * 100) : 0;
+
+    const activityByDay = new Map();
+    const now = new Date();
+    for (let i = 6; i >= 0; i -= 1) {
+      const day = new Date(now);
+      day.setDate(now.getDate() - i);
+      activityByDay.set(day.toISOString().slice(0, 10), { date: day.toISOString().slice(0, 10), label: day.toLocaleDateString('en-US', { weekday: 'short' }), orders: 0 });
+    }
+    for (const order of myOrders) {
+      const key = String(order.createdAt || '').slice(0, 10);
+      if (activityByDay.has(key)) activityByDay.get(key).orders += 1;
+    }
+
+    const [announcements, upcomingItems] = await Promise.all([
+      readJsonFile('announcements'),
+      readJsonFile('upcoming-items'),
+    ]);
+    const latestAnnouncements = [...announcements]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 3);
+    const nextUpcomingItems = [...upcomingItems]
+      .filter((item) => new Date(item.date) >= new Date(now.toDateString()))
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .slice(0, 6);
+
+    res.json({
+      student: req.student,
+      orders: myOrders.slice(0, 6),
+      latestOrder: myOrders[0] || null,
+      latestPayment: myOrders[0] ? myPayments.find((payment) => payment.enrollmentId === myOrders[0].id) || null : null,
+      stats: {
+        purchasedCourses: courseMap.size,
+        purchasedPackages: packageMap.size,
+        totalOrders,
+        completedOrders,
+        pendingOrders,
+        paidPayments,
+        totalPaid,
+        enrollmentProgress,
+      },
+      courses: [...courseMap.values()],
+      packages: [...packageMap.values()],
+      activity: [...activityByDay.values()],
+      announcements: latestAnnouncements,
+      upcomingItems: nextUpcomingItems,
+    });
+  } catch (error) {
+    console.error('Student dashboard read failed:', error);
+    res.status(500).json({ message: 'Could not load your dashboard.' });
+  }
+});
+
+// ---- Announcements ----
+
+app.get('/api/announcements', async (_req, res) => {
+  try {
+    const announcements = await readJsonFile('announcements');
+    res.json({ announcements: announcements.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) });
+  } catch (error) {
+    console.error('Announcements read failed:', error);
+    res.status(500).json({ message: 'Could not load announcements.' });
+  }
+});
+
+app.get('/api/admin/announcements', requireAdmin, async (_req, res) => {
+  try {
+    const announcements = await readJsonFile('announcements');
+    res.json({ announcements });
+  } catch (error) {
+    console.error('Admin announcements read failed:', error);
+    res.status(500).json({ message: 'Could not load announcements.' });
+  }
+});
+
+app.post('/api/admin/announcements', requireAdmin, async (req, res) => {
+  try {
+    const title = cleanText(req.body?.title, 140);
+    const body = cleanText(req.body?.body, 600);
+    const icon = ['course', 'schedule', 'system'].includes(req.body?.icon) ? req.body.icon : 'system';
+    if (!title || !body) { res.status(400).json({ message: 'Title and body are required.' }); return; }
+
+    const announcements = await readJsonFile('announcements');
+    const announcement = { id: createAdminId('ann'), title, body, icon, createdAt: new Date().toISOString() };
+    announcements.push(announcement);
+    await writeJsonFile('announcements', announcements);
+    res.status(201).json({ announcement });
+  } catch (error) {
+    console.error('Admin announcement create failed:', error);
+    res.status(500).json({ message: 'Could not create announcement.' });
+  }
+});
+
+app.put('/api/admin/announcements/:id', requireAdmin, async (req, res) => {
+  try {
+    const announcements = await readJsonFile('announcements');
+    const index = announcements.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Announcement not found.' }); return; }
+    const title = cleanText(req.body?.title, 140) || announcements[index].title;
+    const body = cleanText(req.body?.body, 600) || announcements[index].body;
+    const icon = ['course', 'schedule', 'system'].includes(req.body?.icon) ? req.body.icon : announcements[index].icon;
+    announcements[index] = { ...announcements[index], title, body, icon, updatedAt: new Date().toISOString() };
+    await writeJsonFile('announcements', announcements);
+    res.json({ announcement: announcements[index] });
+  } catch (error) {
+    console.error('Admin announcement update failed:', error);
+    res.status(500).json({ message: 'Could not update announcement.' });
+  }
+});
+
+app.delete('/api/admin/announcements/:id', requireAdmin, async (req, res) => {
+  try {
+    const announcements = await readJsonFile('announcements');
+    const index = announcements.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Announcement not found.' }); return; }
+    const deleted = announcements.splice(index, 1)[0];
+    await writeJsonFile('announcements', announcements);
+    res.json({ announcement: deleted });
+  } catch (error) {
+    console.error('Admin announcement delete failed:', error);
+    res.status(500).json({ message: 'Could not delete announcement.' });
+  }
+});
+
+// ---- Upcoming items (calendar) ----
+
+app.get('/api/upcoming-items', async (_req, res) => {
+  try {
+    const items = await readJsonFile('upcoming-items');
+    res.json({ upcomingItems: items.sort((a, b) => new Date(a.date) - new Date(b.date)) });
+  } catch (error) {
+    console.error('Upcoming items read failed:', error);
+    res.status(500).json({ message: 'Could not load upcoming items.' });
+  }
+});
+
+app.get('/api/admin/upcoming-items', requireAdmin, async (_req, res) => {
+  try {
+    const items = await readJsonFile('upcoming-items');
+    res.json({ upcomingItems: items });
+  } catch (error) {
+    console.error('Admin upcoming items read failed:', error);
+    res.status(500).json({ message: 'Could not load upcoming items.' });
+  }
+});
+
+app.post('/api/admin/upcoming-items', requireAdmin, async (req, res) => {
+  try {
+    const title = cleanText(req.body?.title, 140);
+    const type = ['class', 'assignment', 'quiz'].includes(req.body?.type) ? req.body.type : 'class';
+    const date = new Date(req.body?.date || '');
+    if (!title || Number.isNaN(date.getTime())) { res.status(400).json({ message: 'Title and a valid date are required.' }); return; }
+
+    const items = await readJsonFile('upcoming-items');
+    const item = { id: createAdminId('event'), title, type, date: date.toISOString(), createdAt: new Date().toISOString() };
+    items.push(item);
+    await writeJsonFile('upcoming-items', items);
+    res.status(201).json({ upcomingItem: item });
+  } catch (error) {
+    console.error('Admin upcoming item create failed:', error);
+    res.status(500).json({ message: 'Could not create upcoming item.' });
+  }
+});
+
+app.put('/api/admin/upcoming-items/:id', requireAdmin, async (req, res) => {
+  try {
+    const items = await readJsonFile('upcoming-items');
+    const index = items.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Upcoming item not found.' }); return; }
+    const title = cleanText(req.body?.title, 140) || items[index].title;
+    const type = ['class', 'assignment', 'quiz'].includes(req.body?.type) ? req.body.type : items[index].type;
+    const parsedDate = req.body?.date ? new Date(req.body.date) : null;
+    const date = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate.toISOString() : items[index].date;
+    items[index] = { ...items[index], title, type, date, updatedAt: new Date().toISOString() };
+    await writeJsonFile('upcoming-items', items);
+    res.json({ upcomingItem: items[index] });
+  } catch (error) {
+    console.error('Admin upcoming item update failed:', error);
+    res.status(500).json({ message: 'Could not update upcoming item.' });
+  }
+});
+
+app.delete('/api/admin/upcoming-items/:id', requireAdmin, async (req, res) => {
+  try {
+    const items = await readJsonFile('upcoming-items');
+    const index = items.findIndex((item) => item.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Upcoming item not found.' }); return; }
+    const deleted = items.splice(index, 1)[0];
+    await writeJsonFile('upcoming-items', items);
+    res.json({ upcomingItem: deleted });
+  } catch (error) {
+    console.error('Admin upcoming item delete failed:', error);
+    res.status(500).json({ message: 'Could not delete upcoming item.' });
   }
 });
 

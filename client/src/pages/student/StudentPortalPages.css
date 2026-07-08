@@ -1,0 +1,602 @@
+.studentDashboardGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .studentDashboardGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.studentPageHeader {
+  margin-bottom: 20px;
+}
+
+.studentPageHeader h2 {
+  margin: 0 0 4px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--hk-text);
+}
+
+.studentPageHeader p {
+  margin: 0;
+  color: var(--hk-muted);
+  font-size: 0.92rem;
+}
+
+.studentCard {
+  background: var(--hk-card);
+  border: 1px solid var(--hk-border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.studentCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.studentCardHead h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--hk-text);
+}
+
+.studentCardHead a,
+.studentCardHead button {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--hk-primary);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.studentEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: var(--hk-muted);
+}
+
+.studentEmptyState svg {
+  color: var(--hk-primary);
+  opacity: 0.5;
+}
+
+.studentEmptyState a {
+  margin-top: 6px;
+  background: var(--hk-primary);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 10px 18px;
+  border-radius: 10px;
+}
+
+.studentStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.studentStatusBadge.pending { background: #FEF3C7; color: #92400E; }
+.studentStatusBadge.confirmed { background: #DBEAFE; color: #1D4ED8; }
+.studentStatusBadge.paid { background: #DBEAFE; color: #1D4ED8; }
+.studentStatusBadge.completed { background: #DCFCE7; color: #166534; }
+.studentStatusBadge.inprogress { background: #DBEAFE; color: #1D4ED8; }
+.studentStatusBadge.pendingpayment { background: #FEF3C7; color: #92400E; }
+.studentStatusBadge.cancelled { background: #FEE2E2; color: #B91C1C; }
+.studentStatusBadge.refunded { background: #E5E7EB; color: #374151; }
+
+.studentMethodBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 11px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.studentEnrollmentGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.studentEnrollmentCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--hk-border);
+  border-radius: 14px;
+}
+
+.studentEnrollmentIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #EEF1FD;
+  color: var(--hk-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.studentEnrollmentBody {
+  flex: 1;
+  min-width: 180px;
+}
+
+.studentEnrollmentBody h4 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  color: var(--hk-text);
+}
+
+.studentEnrollmentBody span {
+  font-size: 0.8rem;
+  color: var(--hk-muted);
+}
+
+.studentEnrollmentMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.studentEnrollmentAmount {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--hk-text);
+}
+
+/* Coming soon */
+
+.studentComingSoon {
+  background: var(--hk-card);
+  border: 1px solid var(--hk-border);
+  border-radius: 16px;
+  padding: 64px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.studentComingSoonIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #EEF1FD;
+  color: var(--hk-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.studentComingSoon h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--hk-text);
+}
+
+.studentComingSoon p {
+  margin: 0;
+  max-width: 420px;
+  color: var(--hk-muted);
+  font-size: 0.92rem;
+}
+
+.studentComingSoonBadge {
+  margin-top: 6px;
+  background: #FEF3C7;
+  color: #92400E;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+/* Forms (profile / settings) */
+
+.studentForm {
+  display: grid;
+  gap: 16px;
+  max-width: 440px;
+}
+
+.studentFormField {
+  display: grid;
+  gap: 6px;
+}
+
+.studentFormField label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--hk-text);
+}
+
+.studentFormField input {
+  border: 1px solid var(--hk-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.studentFormField input:disabled {
+  background: var(--hk-bg);
+  color: var(--hk-muted);
+}
+
+.studentFormActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.studentBtnPrimary {
+  background: var(--hk-primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 22px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.studentBtnPrimary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.studentBtnPrimary svg,
+.studentBtnGhost svg {
+  vertical-align: -3px;
+  margin-right: 4px;
+}
+
+.studentBtnGhost {
+  background: var(--hk-bg);
+  color: var(--hk-text);
+  border: 1px solid var(--hk-border);
+  border-radius: 10px;
+  padding: 11px 18px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.studentBtnGhost:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.studentAvatarUploader {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.studentAvatarPreview {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: var(--hk-bg);
+  color: var(--hk-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid var(--hk-border);
+}
+
+.studentAvatarPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.studentAvatarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.studentAvatarActions small {
+  width: 100%;
+  color: var(--hk-muted);
+  font-size: 0.76rem;
+}
+
+.studentFormMessage {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.studentFormMessage.success { color: var(--hk-success); }
+.studentFormMessage.error { color: var(--hk-accent); }
+
+.studentSettingsNote {
+  color: var(--hk-muted);
+  font-size: 0.85rem;
+  background: var(--hk-bg);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+
+.studentAnnouncementList {
+  display: grid;
+  gap: 14px;
+}
+
+.studentAnnouncementRow {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--hk-border);
+  border-radius: 12px;
+}
+
+.studentAnnouncementIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #EEF1FD;
+  color: var(--hk-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.studentAnnouncementRow h4 {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  color: var(--hk-text);
+}
+
+.studentAnnouncementRow p {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: var(--hk-muted);
+  line-height: 1.4;
+}
+
+.studentAnnouncementRow time {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+}
+
+/* Course cards */
+
+.studentCourseGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.studentCourseCard {
+  border: 1px solid var(--hk-border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--hk-card);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.studentCourseThumb {
+  position: relative;
+  background: linear-gradient(135deg, #1E2F97, #2554A5);
+  height: 118px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  overflow: hidden;
+}
+
+.studentCourseThumb img {
+  width: 46px;
+  height: 46px;
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+}
+
+.studentCourseThumb img.studentCourseThumbPhoto {
+  width: 100%;
+  height: 100%;
+  filter: none;
+  opacity: 1;
+  object-fit: cover;
+}
+
+.studentCourseAppBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(7, 22, 47, 0.55);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.studentCourseThumb .studentStatusBadge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.studentCourseBody {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.studentCourseCategory {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--hk-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.studentCourseBody h4 {
+  margin: 2px 0 8px;
+  font-size: 0.95rem;
+  color: var(--hk-text);
+  line-height: 1.3;
+}
+
+.studentCourseInstructorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.studentCourseAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--hk-bg);
+  color: var(--hk-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.studentCourseAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.studentCourseInstructorRow span {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  color: var(--hk-text);
+  line-height: 1.25;
+}
+
+.studentCourseInstructorRow small {
+  color: var(--hk-muted);
+  font-size: 0.7rem;
+}
+
+.studentCourseProgress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.studentCourseProgressTrack {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #E5E7EB;
+  overflow: hidden;
+}
+
+.studentCourseProgressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--hk-primary);
+}
+
+.studentCourseProgress small {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--hk-muted);
+}
+
+.studentCourseCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #EEF1FD;
+  border: 1px solid #D6DEFA;
+  color: var(--hk-primary);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 9px;
+  border-radius: 9px;
+}
+
+.studentSubjectList {
+  display: grid;
+  gap: 12px;
+}
+
+.studentSubjectRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studentSubjectDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.studentSubjectName {
+  flex: 1;
+  font-size: 0.86rem;
+  color: var(--hk-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studentProgressNote {
+  font-size: 0.8rem;
+  color: var(--hk-muted);
+  background: var(--hk-bg);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: -6px 0 18px;
+}

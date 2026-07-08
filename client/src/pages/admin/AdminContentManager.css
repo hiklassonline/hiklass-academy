@@ -1,0 +1,515 @@
+.adminContentManager {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  color: #111827;
+}
+
+.adminContentBack {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: #1E2F97;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+.adminContentManager h1 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+}
+
+.adminContentManager > p {
+  margin: 0 0 20px;
+  color: #6B7280;
+}
+
+.adminContentStatus {
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.adminContentStatus.success { background: #DCFCE7; color: #166534; }
+.adminContentStatus.error { background: #FEE2E2; color: #B91C1C; }
+
+.adminContentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.adminContentCard {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.adminContentCard h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  color: #1E2F97;
+}
+
+.adminContentForm {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.adminContentForm input,
+.adminContentForm textarea,
+.adminContentForm select {
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 0.88rem;
+  font-family: inherit;
+}
+
+.adminContentForm button {
+  justify-self: start;
+  background: #1E2F97;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.adminContentForm button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.adminContentFormActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adminContentFormActions button.ghost {
+  background: #F3F4F6;
+  color: #374151;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.adminContentList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.adminContentList li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+}
+
+.adminContentList li.editing {
+  border-color: #1E2F97;
+  box-shadow: 0 0 0 1px #1E2F97;
+}
+
+.adminContentList strong {
+  font-size: 0.88rem;
+}
+
+.adminContentList p {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  color: #6B7280;
+}
+
+.adminContentList time {
+  font-size: 0.72rem;
+  color: #9CA3AF;
+}
+
+.adminContentListActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.adminContentListActions button {
+  border: none;
+  background: #EEF1FD;
+  color: #1E2F97;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.adminContentListActions button.danger {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.adminContentEmpty {
+  color: #9CA3AF;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 20px 0;
+  border: none !important;
+}
+
+.adminContentAccounts {
+  margin-top: 20px;
+}
+
+.adminContentHint {
+  margin: -8px 0 16px;
+  color: #6B7280;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.adminAccountsTableWrap {
+  overflow-x: auto;
+}
+
+.adminAccountsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.adminAccountsTable th {
+  text-align: left;
+  padding: 10px 12px;
+  color: #6B7280;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.adminAccountsTable td {
+  padding: 12px;
+  border-bottom: 1px solid #F3F4F6;
+  color: #111827;
+}
+
+.adminAccountBadge {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.adminAccountBadge.password { background: #EEF1FD; color: #1E2F97; }
+.adminAccountBadge.google { background: #FEF3C7; color: #92400E; }
+
+.adminAccountActions {
+  display: flex;
+  gap: 8px;
+}
+
+.adminAccountActions button {
+  border: none;
+  background: #EEF1FD;
+  color: #1E2F97;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.adminAccountActions button.danger {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.adminContentCard > select {
+  width: 100%;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  margin-bottom: 12px;
+}
+
+.adminCurriculumJson {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 12px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.adminCurriculumActions {
+  display: flex;
+  gap: 10px;
+}
+
+.adminCurriculumActions button,
+.adminContentCard > button {
+  background: #1E2F97;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.adminCurriculumActions button.danger {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.adminCurriculumActions button:disabled,
+.adminContentCard > button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.adminLessonChecklist {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  max-height: 340px;
+  overflow-y: auto;
+  display: grid;
+  gap: 4px;
+}
+
+.adminLessonChecklist li {
+  border-bottom: 1px solid #F3F4F6;
+  padding: 6px 0;
+}
+
+.adminLessonChecklist label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: #111827;
+  cursor: pointer;
+}
+
+.adminLessonId {
+  font-weight: 700;
+  color: #6B7280;
+  font-size: 0.78rem;
+  width: 30px;
+  flex-shrink: 0;
+}
+
+.adminLessonChecklist small {
+  margin-left: auto;
+  color: #9CA3AF;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+/* Curriculum form editor */
+
+.adminCurriculumModeTabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 3px;
+  width: fit-content;
+}
+
+.adminCurriculumModeTabs button {
+  border: none;
+  background: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6B7280;
+  cursor: pointer;
+}
+
+.adminCurriculumModeTabs button.active {
+  background: #1E2F97;
+  color: #fff;
+}
+
+.adminCurriculumForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 10px;
+}
+
+.adminFormGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.adminFormField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.adminFormField small {
+  font-weight: 400;
+  color: #9CA3AF;
+}
+
+.adminFormField input,
+.adminFormField textarea {
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  font-weight: 400;
+  color: #111827;
+}
+
+.adminFormSectionTitle {
+  margin: 4px 0 0;
+  font-size: 0.92rem;
+  color: #1E2F97;
+}
+
+.adminModuleEditor {
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #FAFAFB;
+}
+
+.adminModuleEditorHead,
+.adminLessonEditor,
+.adminAssessmentRow {
+  --field-border: #E5E7EB;
+}
+
+.adminModuleEditorHead input,
+.adminLessonEditor input,
+.adminAssessmentRow input {
+  border: 1px solid var(--field-border);
+  border-radius: 7px;
+  padding: 7px 9px;
+  font-size: 0.82rem;
+  font-family: inherit;
+}
+
+.adminModuleEditorHead {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.adminModuleEditorHead input:nth-child(2) {
+  flex: 1;
+}
+
+.adminModuleIdInput {
+  width: 52px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.adminLessonEditor {
+  display: grid;
+  grid-template-columns: 52px 1fr 30px;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+}
+
+.adminLessonWide {
+  grid-column: 1 / -1;
+}
+
+.adminAddRow {
+  justify-self: start;
+  border: 1px dashed #C7D2FE;
+  background: #EEF1FD;
+  color: #1E2F97;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+}
+
+.adminAssessmentRow {
+  display: grid;
+  grid-template-columns: 1fr 80px 30px;
+  gap: 6px;
+  align-items: center;
+}
+
+.adminIconDanger {
+  border: none;
+  background: #FEE2E2;
+  color: #B91C1C;
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.adminAccountActions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
