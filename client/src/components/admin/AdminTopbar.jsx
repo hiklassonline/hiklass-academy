@@ -5,7 +5,7 @@ import useGlobalSearch from '../../hooks/useGlobalSearch';
 import { getStoredAdminToken } from '../../services/authService';
 import { getStoredAdminUser } from '../../services/adminProfileService';
 import API_URL from '../../utils/apiBaseUrl';
-import AdminAvatar from './AdminAvatar';
+import AdminAvatar from './AdminAvatar.jsx';
 
 const notifTypeIcons = { enrollment: Mail, payment: CreditCard, message: MessageSquare, error: AlertCircle, info: Info };
 const notifTypeColors = { enrollment: '#1E2F97', payment: '#059669', message: '#2554A5', error: '#D30D1A', info: '#6B7280' };

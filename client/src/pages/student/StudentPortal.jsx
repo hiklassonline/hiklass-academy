@@ -3,20 +3,20 @@ import {
   Award,
   Download,
 } from 'lucide-react';
-import StudentPortalLayout from './StudentPortalLayout';
-import StudentDashboard from './StudentDashboard';
-import StudentCourses from './StudentCourses';
-import StudentCourseCurriculum from './StudentCourseCurriculum';
-import StudentPackages from './StudentPackages';
-import StudentOrders from './StudentOrders';
-import StudentProgress from './StudentProgress';
-import StudentAnnouncements from './StudentAnnouncements';
-import StudentAssignments from './StudentAssignments';
-import StudentQuizzes from './StudentQuizzes';
-import StudentQuizTake from './StudentQuizTake';
-import StudentMessages from './StudentMessages';
-import StudentProfile from './StudentProfile';
-import StudentSettings from './StudentSettings';
+import StudentPortalLayout from './StudentPortalLayout.jsx';
+import StudentDashboard from './StudentDashboard.jsx';
+import StudentCourses from './StudentCourses.jsx';
+import StudentCourseCurriculum from './StudentCourseCurriculum.jsx';
+import StudentPackages from './StudentPackages.jsx';
+import StudentOrders from './StudentOrders.jsx';
+import StudentProgress from './StudentProgress.jsx';
+import StudentAnnouncements from './StudentAnnouncements.jsx';
+import StudentAssignments from './StudentAssignments.jsx';
+import StudentQuizzes from './StudentQuizzes.jsx';
+import StudentQuizTake from './StudentQuizTake.jsx';
+import StudentMessages from './StudentMessages.jsx';
+import StudentProfile from './StudentProfile.jsx';
+import StudentSettings from './StudentSettings.jsx';
 import ComingSoon from '../../components/student/ComingSoon';
 import { fetchAnnouncements, fetchUnreadMessageCount } from '../../services/studentAuthService';
 import './StudentPortalPages.css';

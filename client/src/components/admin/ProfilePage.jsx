@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Loader2, Trash2, Save, User, Mail, Shield, AlertCircle } from 'lucide-react';
 import { getAdminProfile, updateAdminProfile, uploadAdminAvatar, deleteAdminAvatar, getStoredAdminUser } from '../../services/adminProfileService';
-import AdminAvatar from './AdminAvatar';
+import AdminAvatar from './AdminAvatar.jsx';
 
 function toast(text, type = 'success') {
   const evt = new CustomEvent('admin:toast', { detail: { message: text, type } });

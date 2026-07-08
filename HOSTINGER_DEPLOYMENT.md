@@ -78,6 +78,10 @@ After upload, run dependency install from Hostinger's Node.js panel if it does n
 
 Set these in Hostinger's Node.js app environment settings. Replace the URL and secrets before starting the app.
 
+Do not add a custom `PORT` variable in Hostinger. The Node.js proxy injects the
+correct port automatically; forcing `PORT=5000` can make the app unreachable and
+show Hostinger's generic `503 Service Unavailable` page.
+
 ```env
 NODE_ENV=production
 CLIENT_URL=https://hiklassacademy.com

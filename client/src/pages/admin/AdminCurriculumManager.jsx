@@ -3,7 +3,7 @@ import { BookOpen, CheckSquare, Save, Trash2 } from 'lucide-react';
 import { getStoredAdminToken } from '../../services/authService';
 import { adminApi } from '../../services/adminContentApi';
 import { courses as catalog } from '../../data/courses';
-import AdminCurriculumForm from './AdminCurriculumForm';
+import AdminCurriculumForm from './AdminCurriculumForm.jsx';
 
 const CURRICULUM_TEMPLATE = {
   courseCode: '',

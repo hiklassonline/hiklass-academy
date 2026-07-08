@@ -1,4 +1,4 @@
-import API_BASE_URL from './apiBaseUrl';
+import API_BASE_URL from './apiBaseUrl.js';
 
 export default function getAssetUrl(path) {
   if (!path) return '';

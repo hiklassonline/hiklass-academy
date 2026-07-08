@@ -1,5 +1,5 @@
 import API_URL from '../utils/apiBaseUrl';
-import { clearAdminSession } from './authService';
+import { clearAdminSession } from './authService.js';
 
 export async function adminApi(token, method, path, body) {
   const options = { method, headers: { 'x-admin-token': token }, cache: 'no-store' };

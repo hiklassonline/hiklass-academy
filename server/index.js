@@ -5150,10 +5150,41 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ message: 'Internal server error.' });
 });
 
-function startServer(port = PORT) {
-  return app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
-  });
+function startServer(port = PORT, options = {}) {
+  const numericPort = Number(port);
+  const maxRetries = Number(options.maxRetries ?? (process.env.NODE_ENV !== 'production' ? 10 : 0));
+  let attempts = 0;
+
+  function listen(nextPort) {
+    const server = app.listen(nextPort, () => {
+      console.log(`Server running on http://localhost:${nextPort}`);
+    });
+
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE' && attempts < maxRetries) {
+        attempts += 1;
+        const retryPort = nextPort + 1;
+        console.warn(`Port ${nextPort} is already in use. Trying ${retryPort}...`);
+        listen(retryPort);
+        return;
+      }
+
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${nextPort} is already in use. Set PORT to an available port.`);
+      } else {
+        console.error('Server failed to start:', error);
+      }
+      process.exitCode = 1;
+    });
+
+    return server;
+  }
+
+  if (!Number.isInteger(numericPort) || numericPort <= 0 || numericPort > 65535) {
+    throw new Error(`Invalid PORT value: ${port}`);
+  }
+
+  return listen(numericPort);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Calendar, KeyRound, Megaphone, Pencil, Trash2, Users, X } from 'lucide-react';
 import { getStoredAdminToken } from '../../services/authService';
 import { adminApi } from '../../services/adminContentApi';
-import AdminCurriculumManager from './AdminCurriculumManager';
-import AdminAssignmentsManager from './AdminAssignmentsManager';
-import AdminQuizzesManager from './AdminQuizzesManager';
-import AdminMessagesPanel from './AdminMessagesPanel';
+import AdminCurriculumManager from './AdminCurriculumManager.jsx';
+import AdminAssignmentsManager from './AdminAssignmentsManager.jsx';
+import AdminQuizzesManager from './AdminQuizzesManager.jsx';
+import AdminMessagesPanel from './AdminMessagesPanel.jsx';
 import './AdminContentManager.css';
 
 const ICON_OPTIONS = [

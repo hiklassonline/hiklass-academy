@@ -58,33 +58,33 @@ import {
   WalletCards,
   X,
 } from 'lucide-react';
-import { brandAssets, uiAssets } from './assets';
+import { brandAssets, uiAssets } from './assets/index.js';
 import starterPackageImage from './assets/course-images/Starter-Package.jpg';
 import creativePackageImage from './assets/course-images/Creative-Package.jpg';
 import developerPackageImage from './assets/course-images/Developer-Package.jpg';
 import professionalPackageImage from './assets/course-images/Professional-Package.jpg';
 import aiFutureTechPackageImage from './assets/course-images/AI-&-Future-Tech-Package.jpg';
 import kidsHolidayPackageImage from './assets/course-images/Kids-Holiday-Package.jpg';
-import { categories, courses } from './data/courses';
-import Modal from './components/admin/Modal';
-import ConfirmDialog from './components/admin/ConfirmDialog';
-import Toast from './components/admin/Toast';
-import AdminTopbar from './components/admin/AdminTopbar';
-import ProfilePage from './components/admin/ProfilePage';
-import PaymentDetailsPanel from './components/PaymentDetailsPanel';
-import PaymentMethodSelector from './components/PaymentMethodSelector';
-import SmartsuppChat from './components/SmartsuppChat';
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminContentManager from './pages/admin/AdminContentManager';
-import StudentLogin from './pages/student/StudentLogin';
-import StudentRegister from './pages/student/StudentRegister';
-import StudentPortal from './pages/student/StudentPortal';
-import { paymentMethodOptions } from './data/paymentMethods';
-import { submitEnrollment } from './services/api';
-import { ADMIN_TOKEN_KEY, clearAdminSession, getStoredAdminToken } from './services/authService';
-import { getStoredStudentToken } from './services/studentAuthService';
-import API_URL from './utils/apiBaseUrl';
-import getAssetUrl from './utils/getAssetUrl';
+import { categories, courses } from './data/courses.js';
+import Modal from './components/admin/Modal.jsx';
+import ConfirmDialog from './components/admin/ConfirmDialog.jsx';
+import Toast from './components/admin/Toast.jsx';
+import AdminTopbar from './components/admin/AdminTopbar.jsx';
+import ProfilePage from './components/admin/ProfilePage.jsx';
+import PaymentDetailsPanel from './components/PaymentDetailsPanel.jsx';
+import PaymentMethodSelector from './components/PaymentMethodSelector.jsx';
+import SmartsuppChat from './components/SmartsuppChat.jsx';
+import AdminLogin from './pages/admin/AdminLogin.jsx';
+import AdminContentManager from './pages/admin/AdminContentManager.jsx';
+import StudentLogin from './pages/student/StudentLogin.jsx';
+import StudentRegister from './pages/student/StudentRegister.jsx';
+import StudentPortal from './pages/student/StudentPortal.jsx';
+import { paymentMethodOptions } from './data/paymentMethods.js';
+import { submitEnrollment } from './services/api.js';
+import { ADMIN_TOKEN_KEY, clearAdminSession, getStoredAdminToken } from './services/authService.js';
+import { getStoredStudentToken } from './services/studentAuthService.js';
+import API_URL from './utils/apiBaseUrl.js';
+import getAssetUrl from './utils/getAssetUrl.js';
 import './styles.css';
 
 const WHATSAPP_NUMBER = '237651251941';
@@ -585,7 +585,7 @@ function Hero() {
         </div>
         <div className="proofStrip" aria-label="Course highlights">
           <span>
-            <strong>24</strong>
+            <strong>25</strong>
             course tracks
           </span>
           <span>
