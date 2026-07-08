@@ -220,10 +220,17 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 const UPLOADS_DIR = path.isAbsolute(process.env.UPLOAD_DIR || '')
   ? process.env.UPLOAD_DIR
   : path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
+function ensureStartupDir(dir, label) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (error) {
+    console.error(`Could not create ${label} directory at ${dir}:`, error?.message || error);
+  }
+}
 const AVATAR_DIR = path.join(UPLOADS_DIR, 'admin-avatars');
-if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
+ensureStartupDir(AVATAR_DIR, 'admin avatar');
 const STUDENT_AVATAR_DIR = path.join(UPLOADS_DIR, 'student-avatars');
-if (!fs.existsSync(STUDENT_AVATAR_DIR)) fs.mkdirSync(STUDENT_AVATAR_DIR, { recursive: true });
+ensureStartupDir(STUDENT_AVATAR_DIR, 'student avatar');
 
 const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, AVATAR_DIR),
@@ -255,7 +262,7 @@ const studentAvatarStorage = multer.diskStorage({
 const uploadStudentAvatar = multer({ storage: studentAvatarStorage, fileFilter: avatarFileFilter, limits: { fileSize: MAX_SIZE } });
 
 const INSTRUCTOR_AVATAR_DIR = path.join(UPLOADS_DIR, 'instructor-avatars');
-if (!fs.existsSync(INSTRUCTOR_AVATAR_DIR)) fs.mkdirSync(INSTRUCTOR_AVATAR_DIR, { recursive: true });
+ensureStartupDir(INSTRUCTOR_AVATAR_DIR, 'instructor avatar');
 const instructorAvatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, INSTRUCTOR_AVATAR_DIR),
   filename: (_req, file, cb) => {
@@ -267,7 +274,7 @@ const instructorAvatarStorage = multer.diskStorage({
 const uploadInstructorAvatar = multer({ storage: instructorAvatarStorage, fileFilter: avatarFileFilter, limits: { fileSize: MAX_SIZE } });
 
 const COURSE_IMAGE_DIR = path.join(UPLOADS_DIR, 'course-images');
-if (!fs.existsSync(COURSE_IMAGE_DIR)) fs.mkdirSync(COURSE_IMAGE_DIR, { recursive: true });
+ensureStartupDir(COURSE_IMAGE_DIR, 'course image');
 const courseImageStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, COURSE_IMAGE_DIR),
   filename: (_req, file, cb) => {
@@ -280,7 +287,7 @@ const COURSE_IMAGE_MAX_SIZE = 4 * 1024 * 1024;
 const uploadCourseImage = multer({ storage: courseImageStorage, fileFilter: avatarFileFilter, limits: { fileSize: COURSE_IMAGE_MAX_SIZE } });
 
 const PACKAGE_IMAGE_DIR = path.join(UPLOADS_DIR, 'package-images');
-if (!fs.existsSync(PACKAGE_IMAGE_DIR)) fs.mkdirSync(PACKAGE_IMAGE_DIR, { recursive: true });
+ensureStartupDir(PACKAGE_IMAGE_DIR, 'package image');
 const packageImageStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, PACKAGE_IMAGE_DIR),
   filename: (_req, file, cb) => {
@@ -292,7 +299,7 @@ const packageImageStorage = multer.diskStorage({
 const uploadPackageImage = multer({ storage: packageImageStorage, fileFilter: avatarFileFilter, limits: { fileSize: COURSE_IMAGE_MAX_SIZE } });
 
 const ASSIGNMENT_UPLOAD_DIR = path.join(UPLOADS_DIR, 'assignment-submissions');
-if (!fs.existsSync(ASSIGNMENT_UPLOAD_DIR)) fs.mkdirSync(ASSIGNMENT_UPLOAD_DIR, { recursive: true });
+ensureStartupDir(ASSIGNMENT_UPLOAD_DIR, 'assignment upload');
 const ASSIGNMENT_ALLOWED_MIME = [
   'application/pdf',
   'application/msword',
