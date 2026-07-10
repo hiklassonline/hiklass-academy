@@ -1,3 +1,4 @@
+import compression from 'compression';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
@@ -130,6 +131,34 @@ const PACKAGE_CATALOG = new Map(
       duration: '1 Month',
       courses: ['Scratch Programming', 'Coding for Kids', 'Animation', 'Robotics Basics'],
     },
+    {
+      id: 'professional-secretary',
+      name: 'Professional Secretary & Office Administration',
+      price: 250000,
+      duration: '3 Months',
+      courses: [
+        'Office Administration & Management',
+        'Business Communication',
+        'Professional Business Writing',
+        'Microsoft Word',
+        'Microsoft Excel',
+        'Microsoft PowerPoint',
+        'Microsoft Outlook',
+        'Google Workspace (Docs, Sheets, Drive, Calendar)',
+        'Records & File Management',
+        'Executive Calendar & Appointment Scheduling',
+        'Meeting Planning & Minute Taking',
+        'Customer Service & Front Desk Management',
+        'Telephone & Email Etiquette',
+        'Office Equipment & Digital Tools',
+        'Office Finance & Petty Cash Basics',
+        'Human Resource Administrative Support',
+        'Business Ethics & Workplace Professionalism',
+        'AI for Office Productivity (ChatGPT, Claude AI, Microsoft Copilot, Google Gemini)',
+        'Time Management & Productivity',
+        'Virtual Assistant Skills',
+      ],
+    },
   ].flatMap((item) => [
     [item.id, item],
     [item.name, item],
@@ -195,6 +224,7 @@ function isAllowedOrigin(origin) {
 
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
+app.use(compression());
 app.use(
   cors({
     origin(origin, callback) {
@@ -246,7 +276,11 @@ const MAX_SIZE = 2 * 1024 * 1024;
 
 function avatarFileFilter(_req, file, cb) {
   if (ALLOWED_MIME.includes(file.mimetype)) cb(null, true);
-  else cb(new Error('Only JPG, PNG, and WEBP files are allowed.'));
+  else {
+    const error = new Error('Only JPG, PNG, and WEBP files are allowed.');
+    error.status = 400;
+    cb(error);
+  }
 }
 
 const uploadAvatar = multer({ storage: avatarStorage, fileFilter: avatarFileFilter, limits: { fileSize: MAX_SIZE } });
@@ -325,9 +359,48 @@ const assignmentStorage = multer.diskStorage({
 });
 function assignmentFileFilter(_req, file, cb) {
   if (ASSIGNMENT_ALLOWED_MIME.includes(file.mimetype)) cb(null, true);
-  else cb(new Error('Only PDF, Word, Excel, PowerPoint, ZIP, JPG, PNG, and WEBP files are allowed.'));
+  else {
+    const error = new Error('Only PDF, Word, Excel, PowerPoint, ZIP, JPG, PNG, and WEBP files are allowed.');
+    error.status = 400;
+    cb(error);
+  }
 }
 const uploadAssignmentFile = multer({ storage: assignmentStorage, fileFilter: assignmentFileFilter, limits: { fileSize: ASSIGNMENT_MAX_SIZE } });
+
+const VOICE_NOTE_DIR = path.join(UPLOADS_DIR, 'voice-notes');
+ensureStartupDir(VOICE_NOTE_DIR, 'voice note');
+const VOICE_NOTE_ALLOWED_MIME = [
+  'audio/webm',
+  'audio/ogg',
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/mp4',
+  'audio/m4a',
+  'audio/x-m4a',
+  'audio/aac',
+];
+const VOICE_NOTE_MAX_SIZE = 10 * 1024 * 1024;
+const voiceNoteStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, VOICE_NOTE_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.webm';
+    const safeName = `voice-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, safeName);
+  },
+});
+function voiceNoteFileFilter(_req, file, cb) {
+  // MediaRecorder reports mimeType with codec params (e.g. "audio/webm;codecs=opus"),
+  // so compare only the base type against the allow-list.
+  const baseMime = String(file.mimetype || '').split(';')[0].trim();
+  if (VOICE_NOTE_ALLOWED_MIME.includes(baseMime)) cb(null, true);
+  else {
+    const error = new Error('Only audio recordings are allowed.');
+    error.status = 400;
+    cb(error);
+  }
+}
+const uploadVoiceNote = multer({ storage: voiceNoteStorage, fileFilter: voiceNoteFileFilter, limits: { fileSize: VOICE_NOTE_MAX_SIZE } });
 
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -384,6 +457,14 @@ const studentAuthLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many attempts. Please wait a few minutes and try again.' },
+});
+
+const testimonialLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many submissions. Please wait a few minutes and try again.' },
 });
 
 app.use('/api', apiLimiter);
@@ -3081,6 +3162,52 @@ app.delete('/api/admin/instructors/:id/avatar', requireAdmin, async (req, res) =
   }
 });
 
+app.get('/api/testimonials', async (_req, res) => {
+  try {
+    const testimonials = await readJsonFile('testimonials');
+    const approved = testimonials
+      .filter((item) => item.status === 'Approved')
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .map((item) => ({ id: item.id, name: item.name, role: item.role, text: item.text }));
+    res.json({ testimonials: approved });
+  } catch (error) {
+    console.error('Public testimonials read failed:', error);
+    res.status(500).json({ message: 'Could not load testimonials.' });
+  }
+});
+
+app.post('/api/testimonials', testimonialLimiter, async (req, res) => {
+  try {
+    const name = cleanText(req.body?.name, 90);
+    const role = cleanText(req.body?.role, 60);
+    const text = cleanMultilineText(req.body?.text, 600);
+
+    const errors = [];
+    if (name.length < 2) errors.push('Please enter your name.');
+    if (role.length < 2) errors.push('Please tell us who you are (e.g. Student, Parent).');
+    if (text.length < 10) errors.push('Please share a few more words about your experience.');
+    if (errors.length) { res.status(400).json({ message: errors.join(' ') }); return; }
+
+    const testimonials = await readJsonFile('testimonials');
+    const testimonial = {
+      id: `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      role,
+      text,
+      status: 'Pending',
+      source: 'public',
+      createdAt: new Date().toISOString(),
+    };
+    testimonials.push(testimonial);
+    await writeJsonFile('testimonials', testimonials);
+    await recordActivity('New testimonial submitted', name, role);
+    res.status(201).json({ message: 'Thank you! Your testimonial has been submitted and will appear on the site after review.' });
+  } catch (error) {
+    console.error('Public testimonial submit failed:', error);
+    res.status(500).json({ message: 'Could not submit your testimonial. Please try again later.' });
+  }
+});
+
 app.get('/api/admin/testimonials', requireAdmin, async (_req, res) => {
   try {
     const testimonials = await readJsonFile('testimonials');
@@ -3096,6 +3223,7 @@ app.post('/api/admin/testimonials', requireAdmin, async (req, res) => {
     const testimonials = await readJsonFile('testimonials');
     const testimonial = {
       id: `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      status: 'Approved',
       createdAt: new Date().toISOString(),
       ...req.body,
     };
@@ -3814,14 +3942,26 @@ function courseStageFromOrderStatus(status) {
 const ORDER_STAGE_RANK = { 'Pending Payment': 0, Cancelled: 0, Refunded: 0, 'In Progress': 1, Completed: 2 };
 const CURRICULUM_UNLOCKED_STATUSES = new Set(['In Progress', 'Completed']);
 
+// A package purchase unlocks course access the same way buying the course directly would:
+// the package's own name (so a package that is really a single curriculum, e.g. "Professional
+// Secretary & Office Administration", behaves exactly like a course) plus every course title
+// bundled inside it.
+function orderUnlockedTitles(order) {
+  const titles = new Set((order.courses || []).map((course) => courseTitle(course)));
+  for (const item of order.packages || []) {
+    titles.add(packageName(item));
+    for (const bundled of item.courses || []) titles.add(String(bundled));
+  }
+  return titles;
+}
+
 async function studentCourseAccess(studentEmail, targetCourseTitle) {
   const orders = await readOrders();
   const myOrders = orders.filter((order) => (order.email || '').toLowerCase() === studentEmail);
 
   let best = null;
   for (const order of myOrders) {
-    const enrichedTitles = (order.courses || []).map((course) => courseTitle(course));
-    if (!enrichedTitles.includes(targetCourseTitle)) continue;
+    if (!orderUnlockedTitles(order).has(targetCourseTitle)) continue;
     const stage = courseStageFromOrderStatus(order.status);
     if (!best || ORDER_STAGE_RANK[stage.status] > ORDER_STAGE_RANK[best.status]) best = stage;
   }
@@ -4235,7 +4375,7 @@ app.get('/api/student/assignments', requireStudent, async (req, res) => {
     for (const order of myOrders) {
       const stage = courseStageFromOrderStatus(order.status);
       if (!CURRICULUM_UNLOCKED_STATUSES.has(stage.status)) continue;
-      for (const course of order.courses || []) unlockedTitles.add(courseTitle(course));
+      for (const title of orderUnlockedTitles(order)) unlockedTitles.add(title);
     }
 
     const assignments = await readJsonFile('course-assignments');
@@ -4588,7 +4728,7 @@ app.get('/api/student/quizzes', requireStudent, async (req, res) => {
     for (const order of myOrders) {
       const stage = courseStageFromOrderStatus(order.status);
       if (!CURRICULUM_UNLOCKED_STATUSES.has(stage.status)) continue;
-      for (const course of order.courses || []) unlockedTitles.add(courseTitle(course));
+      for (const title of orderUnlockedTitles(order)) unlockedTitles.add(title);
     }
 
     const quizzes = await readJsonFile('course-quizzes');
@@ -4725,16 +4865,41 @@ app.get('/api/student/messages/unread-count', requireStudent, async (req, res) =
 
 app.post('/api/student/messages', requireStudent, messageLimiter, async (req, res) => {
   try {
+    const all = await readJsonFile('student-messages');
+
+    if (req.body?.type === 'call') {
+      const callType = req.body?.callType === 'audio' ? 'audio' : 'video';
+      const roomName = `hiklass-${req.student.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const record = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        studentId: req.student.id,
+        studentEmail: req.student.email,
+        studentName: req.student.name,
+        sender: 'student',
+        type: 'call',
+        callType,
+        roomName,
+        body: `Started a ${callType} call`,
+        createdAt: new Date().toISOString(),
+        readByStudent: true,
+        readByAdmin: false,
+      };
+      all.push(record);
+      await writeJsonFile('student-messages', all);
+      res.status(201).json({ message: record });
+      return;
+    }
+
     const body = cleanText(req.body?.body, 2000);
     if (!body) { res.status(400).json({ message: 'Message cannot be empty.' }); return; }
 
-    const all = await readJsonFile('student-messages');
     const record = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       studentId: req.student.id,
       studentEmail: req.student.email,
       studentName: req.student.name,
       sender: 'student',
+      type: 'text',
       body,
       createdAt: new Date().toISOString(),
       readByStudent: true,
@@ -4746,6 +4911,33 @@ app.post('/api/student/messages', requireStudent, messageLimiter, async (req, re
   } catch (error) {
     console.error('Student message send failed:', error);
     res.status(500).json({ message: 'Could not send your message.' });
+  }
+});
+
+app.post('/api/student/messages/voice', requireStudent, messageLimiter, uploadVoiceNote.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) { res.status(400).json({ message: 'No audio recorded.' }); return; }
+
+    const all = await readJsonFile('student-messages');
+    const record = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      studentId: req.student.id,
+      studentEmail: req.student.email,
+      studentName: req.student.name,
+      sender: 'student',
+      type: 'voice',
+      audioUrl: `/uploads/voice-notes/${req.file.filename}`,
+      body: 'Voice note',
+      createdAt: new Date().toISOString(),
+      readByStudent: true,
+      readByAdmin: false,
+    };
+    all.push(record);
+    await writeJsonFile('student-messages', all);
+    res.status(201).json({ message: record });
+  } catch (error) {
+    console.error('Student voice note send failed:', error);
+    res.status(500).json({ message: 'Could not send your voice note.' });
   }
 });
 
@@ -4801,20 +4993,46 @@ app.get('/api/admin/messages/:studentId', requireAdmin, async (req, res) => {
 
 app.post('/api/admin/messages/:studentId', requireAdmin, messageLimiter, async (req, res) => {
   try {
-    const body = cleanText(req.body?.body, 2000);
-    if (!body) { res.status(400).json({ message: 'Message cannot be empty.' }); return; }
-
     const accounts = await readJsonFile('student-accounts');
     const account = accounts.find((item) => item.id === req.params.studentId);
     if (!account) { res.status(404).json({ message: 'Student account not found.' }); return; }
 
     const all = await readJsonFile('student-messages');
+
+    if (req.body?.type === 'call') {
+      const callType = req.body?.callType === 'audio' ? 'audio' : 'video';
+      const roomName = `hiklass-${account.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const record = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        studentId: account.id,
+        studentEmail: account.email,
+        studentName: account.name,
+        sender: 'admin',
+        type: 'call',
+        callType,
+        roomName,
+        body: `Started a ${callType} call`,
+        createdAt: new Date().toISOString(),
+        readByStudent: false,
+        readByAdmin: true,
+      };
+      all.push(record);
+      await writeJsonFile('student-messages', all);
+      await recordActivity(`Started a ${callType} call`, account.id, account.name);
+      res.status(201).json({ message: record });
+      return;
+    }
+
+    const body = cleanText(req.body?.body, 2000);
+    if (!body) { res.status(400).json({ message: 'Message cannot be empty.' }); return; }
+
     const record = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       studentId: account.id,
       studentEmail: account.email,
       studentName: account.name,
       sender: 'admin',
+      type: 'text',
       body,
       createdAt: new Date().toISOString(),
       readByStudent: false,
@@ -4827,6 +5045,38 @@ app.post('/api/admin/messages/:studentId', requireAdmin, messageLimiter, async (
   } catch (error) {
     console.error('Admin message send failed:', error);
     res.status(500).json({ message: 'Could not send your reply.' });
+  }
+});
+
+app.post('/api/admin/messages/:studentId/voice', requireAdmin, messageLimiter, uploadVoiceNote.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) { res.status(400).json({ message: 'No audio recorded.' }); return; }
+
+    const accounts = await readJsonFile('student-accounts');
+    const account = accounts.find((item) => item.id === req.params.studentId);
+    if (!account) { res.status(404).json({ message: 'Student account not found.' }); return; }
+
+    const all = await readJsonFile('student-messages');
+    const record = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      studentId: account.id,
+      studentEmail: account.email,
+      studentName: account.name,
+      sender: 'admin',
+      type: 'voice',
+      audioUrl: `/uploads/voice-notes/${req.file.filename}`,
+      body: 'Voice note',
+      createdAt: new Date().toISOString(),
+      readByStudent: false,
+      readByAdmin: true,
+    };
+    all.push(record);
+    await writeJsonFile('student-messages', all);
+    await recordActivity('Sent a voice note', account.id, account.name);
+    res.status(201).json({ message: record });
+  } catch (error) {
+    console.error('Admin voice note send failed:', error);
+    res.status(500).json({ message: 'Could not send your voice note.' });
   }
 });
 
@@ -5154,6 +5404,17 @@ if (fs.existsSync(path.join(clientDist, 'index.html'))) {
 }
 
 app.use((error, _req, res, _next) => {
+  if (error instanceof multer.MulterError) {
+    console.error('Upload rejected:', error);
+    const message = error.code === 'LIMIT_FILE_SIZE' ? 'That file is too large.' : error.message;
+    res.status(400).json({ message });
+    return;
+  }
+  if (error?.status === 400) {
+    console.error('Upload rejected:', error);
+    res.status(400).json({ message: error.message });
+    return;
+  }
   console.error('Unhandled server error:', error);
   res.status(500).json({ message: 'Internal server error.' });
 });
@@ -5194,6 +5455,14 @@ function startServer(port = PORT, options = {}) {
 
   return listen(numericPort);
 }
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception (server kept running):', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection (server kept running):', reason);
+});
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   startServer();

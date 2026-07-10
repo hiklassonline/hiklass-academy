@@ -187,6 +187,25 @@ export async function sendStudentMessage(body) {
   return data.message;
 }
 
+export async function startStudentCall(callType) {
+  const data = await studentApi('POST', '/api/student/messages', { type: 'call', callType });
+  return data.message;
+}
+
+export async function sendStudentVoiceNote(blob) {
+  const token = getStoredStudentToken();
+  const formData = new FormData();
+  formData.append('audio', blob, `voice-note.${(blob.type.split('/')[1] || 'webm').split(';')[0]}`);
+  const res = await fetch(`${API_URL}/api/student/messages/voice`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Could not send your voice note.');
+  return data.message;
+}
+
 export async function fetchUnreadMessageCount() {
   const data = await studentApi('GET', '/api/student/messages/unread-count');
   return data.count || 0;

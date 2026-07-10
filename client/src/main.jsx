@@ -59,13 +59,8 @@ import {
   X,
 } from 'lucide-react';
 import { brandAssets, uiAssets } from './assets/index.js';
-import starterPackageImage from './assets/course-images/Starter-Package.jpg';
-import creativePackageImage from './assets/course-images/Creative-Package.jpg';
-import developerPackageImage from './assets/course-images/Developer-Package.jpg';
-import professionalPackageImage from './assets/course-images/Professional-Package.jpg';
-import aiFutureTechPackageImage from './assets/course-images/AI-&-Future-Tech-Package.jpg';
-import kidsHolidayPackageImage from './assets/course-images/Kids-Holiday-Package.jpg';
 import { categories, courses } from './data/courses.js';
+import { packages } from './data/packages.js';
 import Modal from './components/admin/Modal.jsx';
 import ConfirmDialog from './components/admin/ConfirmDialog.jsx';
 import Toast from './components/admin/Toast.jsx';
@@ -80,7 +75,7 @@ import StudentLogin from './pages/student/StudentLogin.jsx';
 import StudentRegister from './pages/student/StudentRegister.jsx';
 import StudentPortal from './pages/student/StudentPortal.jsx';
 import { paymentMethodOptions } from './data/paymentMethods.js';
-import { submitEnrollment } from './services/api.js';
+import { submitEnrollment, fetchTestimonials, submitTestimonial } from './services/api.js';
 import { ADMIN_TOKEN_KEY, clearAdminSession, getStoredAdminToken } from './services/authService.js';
 import { getStoredStudentToken } from './services/studentAuthService.js';
 import API_URL from './utils/apiBaseUrl.js';
@@ -88,6 +83,7 @@ import getAssetUrl from './utils/getAssetUrl.js';
 import './styles.css';
 
 const WHATSAPP_NUMBER = '237651251941';
+const DASHBOARD_POLL_MS = 30000;
 
 const initialForm = {
   name: '',
@@ -104,58 +100,7 @@ function formatPrice(value) {
   return `${Number(value || 0).toLocaleString('en-US')} FCFA`;
 }
 
-const packages = [
-  {
-    id: 'starter',
-    name: 'Starter Package',
-    price: 50000,
-    duration: '2 Weeks',
-    image: starterPackageImage,
-    courses: ['Basic Computer', 'Internet & Email', 'Microsoft Word', 'Microsoft PowerPoint'],
-  },
-  {
-    id: 'creative',
-    name: 'Creative Package',
-    price: 100000,
-    duration: '1 Month',
-    image: creativePackageImage,
-    courses: ['Canva', 'Photoshop', 'Illustrator', 'CorelDRAW', 'CapCut'],
-  },
-  {
-    id: 'developer',
-    name: 'Developer Package',
-    price: 150000,
-    duration: '2 Months',
-    image: developerPackageImage,
-    courses: ['HTML5', 'CSS3', 'JavaScript', 'React', 'Node.js', 'Database Fundamentals'],
-  },
-  {
-    id: 'professional',
-    name: 'Professional Package',
-    price: 200000,
-    duration: '3 Months',
-    image: professionalPackageImage,
-    courses: ['Full Stack Development', 'Mobile App Development', 'UI/UX Design', 'Cloud Computing'],
-  },
-  {
-    id: 'ai-future-tech',
-    name: 'AI & Future Tech Package',
-    price: 150000,
-    duration: '1 Month',
-    image: aiFutureTechPackageImage,
-    courses: ['Artificial Intelligence', 'Prompt Engineering', 'ChatGPT Productivity', 'Automation Tools'],
-  },
-  {
-    id: 'kids-holiday',
-    name: 'Kids Holiday Package',
-    price: 75000,
-    duration: '1 Month',
-    image: kidsHolidayPackageImage,
-    courses: ['Scratch Programming', 'Coding for Kids', 'Animation', 'Robotics Basics'],
-  },
-];
-
-const testimonials = [
+const defaultTestimonials = [
   {
     name: 'Mireille A.',
     role: 'Holiday student',
@@ -174,10 +119,21 @@ const testimonials = [
 ];
 
 const faqs = [
-  ['Can beginners join?', 'Yes. Many courses start from the basics and move step by step into practical projects.'],
-  ['Do you offer online classes?', 'Yes. Students can choose online, physical, or hybrid learning modes during registration.'],
-  ['Can I select more than one course?', 'Yes. Select as many course cards as you want, then submit one combined order.'],
-  ['What happens after I submit?', 'You receive an email confirmation when SMTP is configured, and the HIKLASS team receives your order.'],
+  ['Who can enroll at HIKLASS Academy?', 'Anyone with a passion for learning can enroll. Our programs are designed for beginners, students, professionals, entrepreneurs, and anyone looking to acquire or improve digital skills.'],
+  ['Do I need prior computer knowledge?', 'No. Many of our courses, such as Basic Computer Training and Microsoft Office Suite, are beginner-friendly. Advanced courses have recommended prerequisites, which are clearly indicated.'],
+  ['Are the classes physical or online?', 'We offer flexible learning options:\n• Physical Classroom Training\n• Live Online Classes\n• Hybrid Learning (Physical + Online)\n\nYou can choose the mode that best suits your schedule.'],
+  ['How long do the courses last?', 'Course durations vary depending on the program. They range from 2 weeks for short courses to 6 months for comprehensive professional programs.'],
+  ['Will I receive a certificate after completing a course?', 'Yes. Students who successfully complete their course requirements and assessments receive an official HIKLASS Academy Certificate of Completion.'],
+  ['What payment methods do you accept?', 'We accept multiple payment options:\n\n• MTN Mobile Money (MoMo)\n• Orange Money (OM)\n• PayPal\n• Cash Payment (At Our Office)'],
+  ['Can I pay in installments?', 'Yes. Selected professional programs allow installment payments. Please contact our admissions team for available payment plans.'],
+  ['What equipment do I need?', 'A laptop or desktop computer is highly recommended for most courses. For online classes, you will also need a stable internet connection.'],
+  ['Will I work on real-world projects?', 'Absolutely! Every course includes practical assignments, hands-on exercises, and real-world projects to help you build a professional portfolio.'],
+  ['Are your instructors experienced?', 'Yes. Our instructors are experienced industry professionals with practical knowledge and years of experience in their respective fields.'],
+  ['Can I enroll in more than one course?', 'Yes. You can enroll in multiple courses or choose one of our professionally curated learning packages for faster career development.'],
+  ['What happens after I submit my enrollment request?', 'Our admissions team will review your application and send a confirmation email with your enrollment details, payment instructions, and the next steps.'],
+  ['Can I switch to another course later?', "Yes. Course transfers are possible within the Academy's transfer policy. Contact the admissions office for assistance."],
+  ['Do you offer support after enrollment?', 'Yes. Students receive continuous academic support, instructor guidance, live chat assistance, and access to learning resources throughout their training.'],
+  ['How do I contact HIKLASS Academy?', '📞 WhatsApp:\n+237 651 251 941\n+237 671 320 385\n\n📧 Email:\ninfo@hiklassacademy.com\n\n🌐 Website:\nhttps://hiklassacademy.com\n\nOur support team is always ready to assist you before, during, and after your learning journey.'],
 ];
 
 function selectedTotal(selectedCourses, selectedPackages) {
@@ -466,6 +422,36 @@ function studentAvatar(name = 'HA') {
     .toUpperCase() || 'HA';
 }
 
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Sums (or counts, by default) records into "last 30 days" vs "the 30 days before that"
+// buckets, based on a date field the caller extracts. Records with no valid date, or
+// older than 60 days, are excluded rather than guessed at.
+function windowSums(records, getDate, getValue = () => 1) {
+  const now = Date.now();
+  let recent = 0;
+  let previous = 0;
+  for (const record of records) {
+    const raw = getDate(record);
+    if (!raw) continue;
+    const time = new Date(raw).getTime();
+    if (Number.isNaN(time)) continue;
+    const age = now - time;
+    if (age < 0 || age > THIRTY_DAYS_MS * 2) continue;
+    const value = getValue(record);
+    if (age <= THIRTY_DAYS_MS) recent += value;
+    else previous += value;
+  }
+  return { recent, previous };
+}
+
+function growthLabel({ recent, previous }) {
+  if (previous === 0) return recent > 0 ? 'New' : '0%';
+  const pct = ((recent - previous) / previous) * 100;
+  const sign = pct >= 0 ? '+' : '';
+  return `${sign}${pct.toFixed(1)}%`;
+}
+
 function buildChartData(orders) {
   const recent = [...orders].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)).slice(-10);
   if (!recent.length) {
@@ -500,6 +486,21 @@ function topCourseRows(stats) {
         ['Video Editing', 18],
         ['Digital Marketing', 15],
         ['Microsoft Office', 12],
+      ];
+  const max = Math.max(...rows.map(([, count]) => count), 1);
+  return rows.slice(0, 5).map(([name, count], index) => ({ name, count, rank: index + 1, percent: Math.round((count / max) * 22) || 9 }));
+}
+
+function topPackageRows(stats) {
+  const entries = Object.entries(stats?.packageCounts || {});
+  const rows = entries.length
+    ? entries
+    : [
+        ['Starter Package', 14],
+        ['Developer Package', 11],
+        ['Creative Package', 9],
+        ['Professional Package', 7],
+        ['Kids Holiday Package', 5],
       ];
   const max = Math.max(...rows.map(([, count]) => count), 1);
   return rows.slice(0, 5).map(([name, count], index) => ({ name, count, rank: index + 1, percent: Math.round((count / max) * 22) || 9 }));
@@ -630,8 +631,13 @@ function CategorySection() {
   );
 }
 
+const TOPIC_LIST_LIMIT = 6;
+
 function CourseCard({ course, selected, onToggle }) {
+  const [topicsExpanded, setTopicsExpanded] = useState(false);
   const isNewBadge = /new/i.test(course.badge || '');
+  const topicsLong = course.topics.length > TOPIC_LIST_LIMIT;
+  const visibleTopics = topicsExpanded || !topicsLong ? course.topics : course.topics.slice(0, TOPIC_LIST_LIMIT);
   return (
     <article className={selected ? 'courseCard selected' : 'courseCard'}>
       {course.badge ? (
@@ -672,10 +678,15 @@ function CourseCard({ course, selected, onToggle }) {
         </p>
         <p className="curriculumLabel">Course Curriculum</p>
         <div className="topicList">
-          {course.topics.map((topic) => (
+          {visibleTopics.map((topic) => (
             <span key={topic}>{topic}</span>
           ))}
         </div>
+        {topicsLong ? (
+          <button type="button" className="readMoreToggle" onClick={() => setTopicsExpanded((current) => !current)}>
+            {topicsExpanded ? 'Show less' : `+ ${course.topics.length - TOPIC_LIST_LIMIT} more`}
+          </button>
+        ) : null}
       </div>
     </article>
   );
@@ -787,7 +798,12 @@ function WhyChoose() {
   );
 }
 
+const PACKAGE_COURSE_LIST_LIMIT = 6;
+
 function PackageCard({ item, selected, onToggle }) {
+  const [coursesExpanded, setCoursesExpanded] = useState(false);
+  const coursesLong = item.courses.length > PACKAGE_COURSE_LIST_LIMIT;
+  const visibleCourses = coursesExpanded || !coursesLong ? item.courses : item.courses.slice(0, PACKAGE_COURSE_LIST_LIMIT);
   return (
     <button type="button" className={selected ? 'packageCard selectedPackage' : 'packageCard'} onClick={() => onToggle(item)} aria-pressed={selected}>
       {item.image ? (
@@ -819,13 +835,21 @@ function PackageCard({ item, selected, onToggle }) {
         <h3>{item.name}</h3>
         <p className="packageSavings">Includes guided lessons, practical exercises, and a complete learning path.</p>
         <div className="packageCourseList">
-          {item.courses.map((course) => (
+          {visibleCourses.map((course) => (
             <span key={course}>
               <CheckCircle2 size={18} />
               {course}
             </span>
           ))}
         </div>
+        {coursesLong ? (
+          <span
+            className="readMoreToggle"
+            onClick={(event) => { event.stopPropagation(); setCoursesExpanded((current) => !current); }}
+          >
+            {coursesExpanded ? 'Show less' : `+ ${item.courses.length - PACKAGE_COURSE_LIST_LIMIT} more`}
+          </span>
+        ) : null}
         <span className="packageSelectLabel">{selected ? <Check size={16} /> : null}{selected ? 'Selected' : 'Select package'}</span>
       </div>
     </button>
@@ -1025,27 +1049,134 @@ function InstructorProfilePage({ instructorId }) {
   );
 }
 
+function TestimonialForm({ onSubmitted }) {
+  const [form, setForm] = useState({ name: '', role: '', text: '' });
+  const [status, setStatus] = useState({ type: '', message: '' });
+  const [submitting, setSubmitting] = useState(false);
+
+  function updateField(key, value) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setSubmitting(true);
+    setStatus({ type: '', message: '' });
+    try {
+      const result = await submitTestimonial(form);
+      setStatus({ type: 'success', message: result.message || 'Thank you! Your testimonial has been submitted for review.' });
+      setForm({ name: '', role: '', text: '' });
+      onSubmitted?.();
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form className="orderForm" onSubmit={handleSubmit} noValidate>
+      <label>
+        Your name
+        <input value={form.name} onChange={(event) => updateField('name', event.target.value)} required />
+      </label>
+      <label>
+        You are a...
+        <input
+          value={form.role}
+          onChange={(event) => updateField('role', event.target.value)}
+          placeholder="Student, Parent, Web Development learner..."
+          required
+        />
+      </label>
+      <label className="full">
+        Your testimonial
+        <textarea
+          value={form.text}
+          onChange={(event) => updateField('text', event.target.value)}
+          placeholder="Tell us about your experience at HIKLASS Academy"
+          required
+        />
+      </label>
+      <div className="full">
+        <button
+          className="button submitButton"
+          type="submit"
+          disabled={submitting}
+          style={{ width: '100%', justifyContent: 'center' }}
+        >
+          {submitting ? 'Sending...' : 'Submit Testimonial'}
+        </button>
+        {status.message ? (
+          <p className={`formStatus ${status.type}`}>
+            {status.type === 'success' ? <img src={uiAssets.successCheck} alt="" /> : null}
+            <span>{status.message}</span>
+          </p>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
+const TESTIMONIAL_TRUNCATE_LENGTH = 220;
+
+function TestimonialCard({ item }) {
+  const [expanded, setExpanded] = useState(false);
+  const text = item.quote || item.text || '';
+  const isLong = text.length > TESTIMONIAL_TRUNCATE_LENGTH;
+  const displayText = expanded || !isLong ? text : `${text.slice(0, TESTIMONIAL_TRUNCATE_LENGTH).trimEnd()}...`;
+
+  return (
+    <article className="testimonialCard">
+      <div className="stars" aria-label="Five star review">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star key={star} size={16} fill="currentColor" />
+        ))}
+      </div>
+      <p>{displayText}</p>
+      {isLong ? (
+        <button type="button" className="readMoreToggle" onClick={() => setExpanded((current) => !current)}>
+          {expanded ? 'Read less' : 'Read more'}
+        </button>
+      ) : null}
+      <strong>{item.name}</strong>
+      <span>{item.role}</span>
+    </article>
+  );
+}
+
 function Testimonials() {
+  const [liveTestimonials, setLiveTestimonials] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    fetchTestimonials()
+      .then((list) => { if (!cancelled) setLiveTestimonials(list); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const allTestimonials = [...defaultTestimonials, ...liveTestimonials];
+
   return (
     <section className="section testimonialsSection">
       <div className="sectionIntro">
         <p className="eyebrow">Testimonials</p>
         <h2>Students and parents value practical results.</h2>
+        <button type="button" className="button primary" style={{ marginTop: '18px' }} onClick={() => setModalOpen(true)}>
+          <MessageSquare size={18} /> Share Your Experience
+        </button>
       </div>
       <div className="testimonialGrid">
-        {testimonials.map((item) => (
-          <article className="testimonialCard" key={item.name}>
-            <div className="stars" aria-label="Five star review">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star key={star} size={16} fill="currentColor" />
-              ))}
-            </div>
-            <p>{item.quote}</p>
-            <strong>{item.name}</strong>
-            <span>{item.role}</span>
-          </article>
+        {allTestimonials.map((item) => (
+          <TestimonialCard key={item.id || item.name} item={item} />
         ))}
       </div>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Share Your Experience">
+        <TestimonialForm onSubmitted={() => setTimeout(() => setModalOpen(false), 2500)} />
+      </Modal>
     </section>
   );
 }
@@ -1450,6 +1581,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
 
   const chartData = useMemo(() => buildChartData(orders), [orders]);
   const topCourses = useMemo(() => topCourseRows(stats), [stats]);
+  const topPackages = useMemo(() => topPackageRows(stats), [stats]);
   const statusData = useMemo(() => buildStatusData(stats, stats?.totalOrders || orders.length), [orders.length, stats]);
   const recentOrders = useMemo(() => filteredOrders.slice(0, 6), [filteredOrders]);
 
@@ -1685,6 +1817,23 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
     else setStatus({ type: 'info', message: 'Enter admin token to access dashboard.' });
   }, [token]);
 
+  // Keep dashboard stats and the active page's data live without requiring a manual
+  // refresh: re-sync on an interval, and immediately whenever the tab regains focus.
+  React.useEffect(() => {
+    if (!token) return undefined;
+    const interval = setInterval(() => { loadAll(); loadSection(activePage); }, DASHBOARD_POLL_MS);
+    function onFocus() {
+      if (document.visibilityState === 'visible') { loadAll(); loadSection(activePage); }
+    }
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [token, activePage]);
+
   React.useEffect(() => {
     if (!token) return;
     loadSection(activePage);
@@ -1708,11 +1857,29 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
     return () => window.removeEventListener('popstate', syncPageFromBrowser);
   }, []);
 
+  const enrollmentGrowth = useMemo(
+    () => growthLabel(windowSums(orders, (order) => order.createdAt)),
+    [orders],
+  );
+  const revenueGrowth = useMemo(
+    () => growthLabel(windowSums(
+      payments.filter((payment) => payment.status === 'Paid'),
+      (payment) => payment.date || payment.createdAt,
+      (payment) => Number(payment.amount || 0),
+    )),
+    [payments],
+  );
+  const studentGrowth = useMemo(
+    () => growthLabel(windowSums(students, (student) => student.createdAt)),
+    [students],
+  );
+
   const statCards = [
-    { label: 'Total Enrollments', value: stats?.totalOrders ?? orders.length, growth: '18.6%', icon: GraduationCap, tone: 'blue' },
-    { label: 'Total Revenue (FCFA)', value: Number(stats?.totalAmount || 0).toLocaleString('en-US'), growth: '24.3%', icon: WalletCards, tone: 'green' },
-    { label: 'Total Students', value: students.length, growth: '16.7%', icon: Users, tone: 'purple' },
-    { label: 'Total Courses', value: courses.length, growth: '9.1%', icon: BookOpen, tone: 'orange' },
+    { label: 'Total Enrollments', value: stats?.totalOrders ?? orders.length, growth: enrollmentGrowth, icon: GraduationCap, tone: 'blue' },
+    { label: 'Total Revenue (FCFA)', value: Number(stats?.totalAmount || 0).toLocaleString('en-US'), growth: revenueGrowth, icon: WalletCards, tone: 'green' },
+    { label: 'Total Students', value: students.length, growth: studentGrowth, icon: Users, tone: 'purple' },
+    { label: 'Total Courses', value: coursesData.length, growth: null, icon: BookOpen, tone: 'orange' },
+    { label: 'Total Packages', value: packagesData.length, growth: null, icon: Package, tone: 'teal' },
   ];
 
   function renderOverview() {
@@ -1727,7 +1894,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
               <div>
                 <strong>{value}</strong>
                 <p>{label}</p>
-                <small>+ {growth} <span>vs last 30 days</span></small>
+                {growth ? <small>{growth} <span>vs last 30 days</span></small> : null}
               </div>
             </article>
           ))}
@@ -1815,6 +1982,26 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
 
           <article className="adminPanel">
             <div className="adminPanelTitle">
+              <h2>Top Packages</h2>
+              <button type="button" onClick={() => openPage('packages')}>View All</button>
+            </div>
+            <div className="topCourseList">
+              {topPackages.map((pkg) => (
+                <div className="topCourseItem" key={pkg.name}>
+                  <span>{pkg.rank}</span>
+                  <div>
+                    <strong>{pkg.name}</strong>
+                    <small>Enrollments: {pkg.count}</small>
+                    <i><b style={{ width: `${pkg.percent * 3.6}%` }} /></i>
+                  </div>
+                  <em>{pkg.percent}%</em>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="adminPanel">
+            <div className="adminPanelTitle">
               <h2>Recent Messages</h2>
               <button type="button" onClick={() => openPage('messages')}>View All</button>
             </div>
@@ -1840,7 +2027,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
             <div className="revenueSummary">
               <span>Total Revenue</span>
               <strong>{formatPrice(stats?.totalAmount || 0)}</strong>
-              <small>+ 24.3% <span>vs last 30 days</span></small>
+              <small>{revenueGrowth} <span>vs last 30 days</span></small>
             </div>
             <ResponsiveContainer width="100%" height={145}>
               <AreaChart data={chartData}>
@@ -1929,7 +2116,21 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
     }
 
     if (activePage === 'testimonials') {
-      return <TestimonialsPage data={testimonialsData} onAdd={() => setModal({ open: true, mode: 'add', page: 'testimonials', data: null })} onEdit={(item) => setModal({ open: true, mode: 'edit', page: 'testimonials', data: item })} onDelete={(id) => setConfirm({ open: true, id, label: 'testimonial', type: 'testimonials' })} />;
+      return (
+        <TestimonialsPage
+          data={testimonialsData}
+          onAdd={() => setModal({ open: true, mode: 'add', page: 'testimonials', data: null })}
+          onEdit={(item) => setModal({ open: true, mode: 'edit', page: 'testimonials', data: item })}
+          onDelete={(id) => setConfirm({ open: true, id, label: 'testimonial', type: 'testimonials' })}
+          onApprove={async (item) => {
+            try {
+              await api('PUT', `/api/admin/testimonials/${item.id}`, { ...item, status: 'Approved' });
+              showToast(`${item.name}'s testimonial approved — now live on the site.`, 'success');
+              await loadSection('testimonials');
+            } catch (err) { showToast(err.message, 'error'); }
+          }}
+        />
+      );
     }
 
     if (activePage === 'messages') {
@@ -2166,6 +2367,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
         { key: 'name', label: 'Name', type: 'text' },
         { key: 'role', label: 'Role', type: 'text' },
         { key: 'text', label: 'Testimonial', type: 'textarea' },
+        { key: 'status', label: 'Status (Approved shows on the website; Pending hides it)', type: 'select', defaultValue: 'Approved', options: ['Pending', 'Approved'] },
         { key: 'avatar', label: 'Avatar URL', type: 'text' },
       ];
     } else if (page === 'admins') {
@@ -2621,7 +2823,7 @@ function SettingsPage({ tokenInput, setTokenInput, saveToken, settings, onEdit, 
   );
 }
 
-function AdminTable({ headers, rows, emptyMsg, onAdd, onEdit, onDelete, addLabel }) {
+function AdminTable({ headers, rows, emptyMsg, onAdd, onEdit, onDelete, addLabel, renderRowActions }) {
   return (
     <>
       {onAdd ? (
@@ -2638,6 +2840,7 @@ function AdminTable({ headers, rows, emptyMsg, onAdd, onEdit, onDelete, addLabel
                 {headers.map((h) => <td key={h}>{row[h] ?? '-'}</td>)}
                 <td>
                   <div className="adminRowActions">
+                    {renderRowActions ? renderRowActions(row) : null}
                     {onEdit ? <button type="button" onClick={() => onEdit(row)}>Edit</button> : null}
                     {onDelete ? <button type="button" className="danger" onClick={() => onDelete(row.id)}>Delete</button> : null}
                   </div>
@@ -2812,11 +3015,22 @@ function InstructorsPage({ data, onAdd, onEdit, onDelete, onUploadPhoto, onRemov
   );
 }
 
-function TestimonialsPage({ data, onAdd, onEdit, onDelete }) {
+function TestimonialsPage({ data, onAdd, onEdit, onDelete, onApprove }) {
   return (
     <article className="adminPanel adminFullPanel">
       <div className="adminPanelTitle"><h2>Testimonials</h2></div>
-      <AdminTable headers={['name', 'role', 'text']} rows={data} emptyMsg="No testimonials yet" onAdd={onAdd} onEdit={onEdit} onDelete={onDelete} addLabel="Add Testimonial" />
+      <AdminTable
+        headers={['name', 'role', 'text', 'status']}
+        rows={data}
+        emptyMsg="No testimonials yet"
+        onAdd={onAdd}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        addLabel="Add Testimonial"
+        renderRowActions={(row) => (row.status !== 'Approved' ? (
+          <button type="button" className="success" onClick={() => onApprove(row)}>Approve</button>
+        ) : null)}
+      />
     </article>
   );
 }

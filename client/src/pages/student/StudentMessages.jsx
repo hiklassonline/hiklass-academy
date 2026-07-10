@@ -1,7 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LifeBuoy, Send } from 'lucide-react';
+import { LifeBuoy, Phone, PhoneCall, Send, Video } from 'lucide-react';
 import EmojiPickerButton from '../../components/EmojiPickerButton';
-import { fetchStudentMessages, sendStudentMessage } from '../../services/studentAuthService';
+import VoiceRecorderButton from '../../components/VoiceRecorderButton';
+import VideoCallModal from '../../components/VideoCallModal';
+import {
+  fetchStudentMessages,
+  getStoredStudentUser,
+  sendStudentMessage,
+  sendStudentVoiceNote,
+  startStudentCall,
+} from '../../services/studentAuthService';
+import getAssetUrl from '../../utils/getAssetUrl';
 import './StudentMessages.css';
 
 const POLL_MS = 4000;
@@ -20,6 +29,7 @@ export default function StudentMessages() {
   const [error, setError] = useState('');
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [activeCall, setActiveCall] = useState(null);
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -85,6 +95,33 @@ export default function StudentMessages() {
     }
   }
 
+  async function handleStartCall(callType) {
+    if (sending) return;
+    setSending(true);
+    try {
+      const sent = await startStudentCall(callType);
+      setMessages((current) => [...current, sent]);
+      setActiveCall({ roomName: sent.roomName, callType });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleVoiceNote(blob) {
+    if (sending) return;
+    setSending(true);
+    try {
+      const sent = await sendStudentVoiceNote(blob);
+      setMessages((current) => [...current, sent]);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <div className="studentMessagesPage">
       <div className="studentPageHeader">
@@ -93,6 +130,15 @@ export default function StudentMessages() {
       </div>
 
       <div className="studentCard studentMessagesCard">
+        <div className="studentMessagesCallButtons">
+          <button type="button" onClick={() => handleStartCall('audio')} disabled={sending}>
+            <Phone size={16} /> Audio Call
+          </button>
+          <button type="button" onClick={() => handleStartCall('video')} disabled={sending}>
+            <Video size={16} /> Video Call
+          </button>
+        </div>
+
         <div className="studentMessagesList" ref={listRef}>
           {loading ? <p className="studentEmptyState">Loading messages...</p> : null}
 
@@ -106,10 +152,32 @@ export default function StudentMessages() {
 
           {messages.map((item) => (
             <div key={item.id} className={item.sender === 'student' ? 'studentMessageRow mine' : 'studentMessageRow'}>
-              <div className="studentMessageBubble">
-                <p>{item.body}</p>
-                <time>{formatTime(item.createdAt)}</time>
-              </div>
+              {item.type === 'call' ? (
+                <div className="studentMessageBubble callBubble">
+                  <div className="callBubbleHead">
+                    {item.callType === 'audio' ? <Phone size={16} /> : <Video size={16} />}
+                    <span>{item.callType === 'audio' ? 'Audio call' : 'Video call'} started</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="callJoinButton"
+                    onClick={() => setActiveCall({ roomName: item.roomName, callType: item.callType })}
+                  >
+                    <PhoneCall size={14} /> Join Call
+                  </button>
+                  <time>{formatTime(item.createdAt)}</time>
+                </div>
+              ) : item.type === 'voice' ? (
+                <div className="studentMessageBubble">
+                  <audio controls src={getAssetUrl(item.audioUrl)} />
+                  <time>{formatTime(item.createdAt)}</time>
+                </div>
+              ) : (
+                <div className="studentMessageBubble">
+                  <p>{item.body}</p>
+                  <time>{formatTime(item.createdAt)}</time>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -118,6 +186,7 @@ export default function StudentMessages() {
 
         <form className="studentMessagesComposer" onSubmit={submit}>
           <EmojiPickerButton onSelect={insertEmoji} />
+          <VoiceRecorderButton onRecorded={handleVoiceNote} disabled={sending} />
           <input
             ref={inputRef}
             value={draft}
@@ -131,6 +200,15 @@ export default function StudentMessages() {
           </button>
         </form>
       </div>
+
+      {activeCall ? (
+        <VideoCallModal
+          roomName={activeCall.roomName}
+          callType={activeCall.callType}
+          displayName={getStoredStudentUser()?.name}
+          onClose={() => setActiveCall(null)}
+        />
+      ) : null}
     </div>
   );
 }

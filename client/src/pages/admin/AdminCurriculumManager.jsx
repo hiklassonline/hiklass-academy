@@ -3,6 +3,7 @@ import { BookOpen, CheckSquare, Save, Trash2 } from 'lucide-react';
 import { getStoredAdminToken } from '../../services/authService';
 import { adminApi } from '../../services/adminContentApi';
 import { courses as catalog } from '../../data/courses';
+import { packages as packageCatalog } from '../../data/packages';
 import AdminCurriculumForm from './AdminCurriculumForm.jsx';
 
 const CURRICULUM_TEMPLATE = {
@@ -177,6 +178,7 @@ export default function AdminCurriculumManager({ studentAccounts }) {
   }
 
   const catalogTitles = catalog.map((course) => course.title);
+  const packageTitles = packageCatalog.map((pkg) => pkg.name);
 
   return (
     <>
@@ -195,11 +197,20 @@ export default function AdminCurriculumManager({ studentAccounts }) {
 
           <select value={selectedCourse} onChange={(e) => onSelectCourse(e.target.value)} disabled={loading}>
             <option value="">Choose a course...</option>
-            {catalogTitles.map((title) => (
-              <option key={title} value={title}>
-                {title}{curricula.some((c) => c.courseTitle === title) ? ' (has curriculum)' : ''}
-              </option>
-            ))}
+            <optgroup label="Courses">
+              {catalogTitles.map((title) => (
+                <option key={title} value={title}>
+                  {title}{curricula.some((c) => c.courseTitle === title) ? ' (has curriculum)' : ''}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Packages">
+              {packageTitles.map((title) => (
+                <option key={title} value={title}>
+                  {title}{curricula.some((c) => c.courseTitle === title) ? ' (has curriculum)' : ''}
+                </option>
+              ))}
+            </optgroup>
           </select>
 
           {selectedCourse ? (

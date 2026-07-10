@@ -375,7 +375,7 @@
 
 .adminMetricGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 14px;
   margin-top: 14px;
 }
@@ -411,6 +411,7 @@
 .adminMetricIcon.green { background: linear-gradient(135deg, #65D486, #1B5E20); }
 .adminMetricIcon.purple { background: linear-gradient(135deg, #C084FC, #7C3AED); }
 .adminMetricIcon.orange { background: linear-gradient(135deg, #FDBA74, #F59E0B); }
+.adminMetricIcon.teal { background: linear-gradient(135deg, #5EEAD4, #0D9488); }
 
 .adminMetricCard strong {
   color: #0F172A;
@@ -648,6 +649,11 @@
 .adminRowActions button.danger {
   background: #FEE2E2;
   color: #D30D1A;
+}
+
+.adminRowActions button.success {
+  background: #DCFCE7;
+  color: #15803D;
 }
 
 .adminRowActions select {
@@ -2594,6 +2600,23 @@ textarea {
   color: var(--bright-red);
 }
 
+.readMoreToggle {
+  display: inline-flex;
+  align-items: center;
+  margin: 2px 0 12px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--royal-blue);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.readMoreToggle:hover {
+  text-decoration: underline;
+}
+
 .testimonialCard strong,
 .testimonialCard span {
   display: block;
@@ -2873,6 +2896,7 @@ textarea {
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.7;
+  white-space: pre-line;
 }
 
 .contactSection {

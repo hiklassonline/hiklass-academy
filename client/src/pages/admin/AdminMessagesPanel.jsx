@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageSquare, Search, Send } from 'lucide-react';
+import { MessageSquare, Phone, PhoneCall, Search, Send, Video } from 'lucide-react';
 import { getStoredAdminToken } from '../../services/authService';
-import { adminApi } from '../../services/adminContentApi';
+import { adminApi, adminUploadVoiceNote } from '../../services/adminContentApi';
 import EmojiPickerButton from '../../components/EmojiPickerButton';
+import VoiceRecorderButton from '../../components/VoiceRecorderButton';
+import VideoCallModal from '../../components/VideoCallModal';
+import getAssetUrl from '../../utils/getAssetUrl';
 import './AdminMessagesPanel.css';
 
 const POLL_MS = 4000;
@@ -26,6 +29,7 @@ export default function AdminMessagesPanel({ studentAccounts = [] }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [activeCall, setActiveCall] = useState(null);
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -120,6 +124,37 @@ export default function AdminMessagesPanel({ studentAccounts = [] }) {
     }
   }
 
+  async function startCall(callType) {
+    if (!selectedId || sending) return;
+    setSending(true);
+    setError('');
+    try {
+      const data = await adminApi(token, 'POST', `/api/admin/messages/${selectedId}`, { type: 'call', callType });
+      setThread((current) => [...current, data.message]);
+      await loadConversations();
+      setActiveCall({ roomName: data.message.roomName, callType });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function sendVoiceNote(blob) {
+    if (!selectedId || sending) return;
+    setSending(true);
+    setError('');
+    try {
+      const data = await adminUploadVoiceNote(token, `/api/admin/messages/${selectedId}/voice`, blob);
+      setThread((current) => [...current, data.message]);
+      await loadConversations();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
   // Merge every registered student account with their conversation (if any), so
   // admin can start a brand-new conversation with a student who hasn't messaged in yet,
   // not just reply to students who already reached out.
@@ -200,23 +235,56 @@ export default function AdminMessagesPanel({ studentAccounts = [] }) {
           ) : (
             <>
               <div className="adminMessagesThreadHead">
-                <strong>{selectedEntry?.studentName}</strong>
-                <small>{selectedEntry?.studentEmail}</small>
+                <div>
+                  <strong>{selectedEntry?.studentName}</strong>
+                  <small>{selectedEntry?.studentEmail}</small>
+                </div>
+                <div className="adminMessagesCallButtons">
+                  <button type="button" onClick={() => startCall('audio')} disabled={sending} aria-label="Start audio call">
+                    <Phone size={16} /> Audio Call
+                  </button>
+                  <button type="button" onClick={() => startCall('video')} disabled={sending} aria-label="Start video call">
+                    <Video size={16} /> Video Call
+                  </button>
+                </div>
               </div>
               <div className="adminMessagesThreadList" ref={listRef}>
                 {loadingThread ? <p className="adminContentEmpty">Loading...</p> : null}
                 {!loadingThread && !thread.length ? <p className="adminContentEmpty">No messages yet. Say hello below.</p> : null}
                 {!loadingThread && thread.map((item) => (
                   <div key={item.id} className={item.sender === 'admin' ? 'adminMessageRow mine' : 'adminMessageRow'}>
-                    <div className="adminMessageBubble">
-                      <p>{item.body}</p>
-                      <time>{formatTime(item.createdAt)}</time>
-                    </div>
+                    {item.type === 'call' ? (
+                      <div className="adminMessageBubble callBubble">
+                        <div className="callBubbleHead">
+                          {item.callType === 'audio' ? <Phone size={16} /> : <Video size={16} />}
+                          <span>{item.callType === 'audio' ? 'Audio call' : 'Video call'} started</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="callJoinButton"
+                          onClick={() => setActiveCall({ roomName: item.roomName, callType: item.callType })}
+                        >
+                          <PhoneCall size={14} /> Join Call
+                        </button>
+                        <time>{formatTime(item.createdAt)}</time>
+                      </div>
+                    ) : item.type === 'voice' ? (
+                      <div className="adminMessageBubble">
+                        <audio controls src={getAssetUrl(item.audioUrl)} />
+                        <time>{formatTime(item.createdAt)}</time>
+                      </div>
+                    ) : (
+                      <div className="adminMessageBubble">
+                        <p>{item.body}</p>
+                        <time>{formatTime(item.createdAt)}</time>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
               <form className="adminMessagesComposer" onSubmit={submit}>
                 <EmojiPickerButton onSelect={insertEmoji} />
+                <VoiceRecorderButton onRecorded={sendVoiceNote} disabled={sending} />
                 <input
                   ref={inputRef}
                   value={draft}
@@ -233,6 +301,15 @@ export default function AdminMessagesPanel({ studentAccounts = [] }) {
           )}
         </div>
       </div>
+
+      {activeCall ? (
+        <VideoCallModal
+          roomName={activeCall.roomName}
+          callType={activeCall.callType}
+          displayName="HIKLASS Academy"
+          onClose={() => setActiveCall(null)}
+        />
+      ) : null}
     </section>
   );
 }

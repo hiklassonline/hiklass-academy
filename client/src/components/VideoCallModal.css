@@ -1,0 +1,64 @@
+.videoCallOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 22, 47, 0.72);
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+
+.videoCallPanel {
+  position: relative;
+  width: min(1100px, 100%);
+  height: min(720px, 92vh);
+  background: #0F172A;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+}
+
+.videoCallContainer {
+  width: 100%;
+  height: 100%;
+}
+
+.videoCallClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.videoCallClose:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.videoCallStatus {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #E5E7EB;
+  font-size: 0.95rem;
+  margin: 0;
+  padding: 20px;
+  text-align: center;
+}
+
+.videoCallStatus.error {
+  color: #FCA5A5;
+}

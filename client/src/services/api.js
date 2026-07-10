@@ -30,3 +30,30 @@ export async function submitEnrollment(payload) {
 
   return data;
 }
+
+export async function fetchTestimonials() {
+  const response = await fetch(`${API_BASE_URL}/testimonials`);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'Could not load testimonials');
+  }
+  return data.testimonials || [];
+}
+
+export async function submitTestimonial(payload) {
+  const response = await fetch(`${API_BASE_URL}/testimonials`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Testimonial submission failed');
+  }
+
+  return data;
+}

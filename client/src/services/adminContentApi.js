@@ -17,3 +17,22 @@ export async function adminApi(token, method, path, body) {
   if (!res.ok) throw new Error(data.message || 'Request failed');
   return data;
 }
+
+export async function adminUploadVoiceNote(token, path, blob) {
+  const formData = new FormData();
+  formData.append('audio', blob, `voice-note.${(blob.type.split('/')[1] || 'webm').split(';')[0]}`);
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: { 'x-admin-token': token },
+    cache: 'no-store',
+    body: formData,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    clearAdminSession();
+    window.location.replace('/admin/login');
+    throw new Error('Your admin session expired. Please sign in again.');
+  }
+  if (!res.ok) throw new Error(data.message || 'Could not send your voice note.');
+  return data;
+}

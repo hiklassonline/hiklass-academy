@@ -19,6 +19,7 @@ import {
   submitStudentAssignment,
 } from '../../services/studentAuthService';
 import { courses as catalog } from '../../data/courses';
+import { packages as packageCatalog } from '../../data/packages';
 import AssignmentCard from '../../components/student/AssignmentCard';
 import './StudentCourseCurriculum.css';
 
@@ -37,6 +38,11 @@ function findCatalogCourse(title) {
     catalog.find((course) => course.title.toLowerCase() === normalized) ||
     catalog.find((course) => normalized.includes(course.title.toLowerCase()) || course.title.toLowerCase().includes(normalized))
   );
+}
+
+function findPackage(title) {
+  const normalized = String(title || '').toLowerCase();
+  return packageCatalog.find((pkg) => pkg.name.toLowerCase() === normalized);
 }
 
 function LessonRow({ lesson, state, expanded, onToggle }) {
@@ -177,6 +183,8 @@ export default function StudentCourseCurriculum({ courseTitle }) {
   }
 
   const catalogCourse = useMemo(() => findCatalogCourse(courseTitle), [courseTitle]);
+  const catalogPackage = useMemo(() => findPackage(courseTitle), [courseTitle]);
+  const bannerImage = catalogCourse?.image || catalogPackage?.image;
 
   function jumpToCurrentLesson() {
     setActiveTab('content');
@@ -215,8 +223,8 @@ export default function StudentCourseCurriculum({ courseTitle }) {
       <a className="studentCurriculumBack" href="/student/courses">&larr; Back to My Courses</a>
 
       <div
-        className={`studentCurriculumBanner${catalogCourse?.image ? ' hasPhoto' : ''}`}
-        style={catalogCourse?.image ? { backgroundImage: `url(${catalogCourse.image})` } : undefined}
+        className={`studentCurriculumBanner${bannerImage ? ' hasPhoto' : ''}`}
+        style={bannerImage ? { backgroundImage: `url(${bannerImage})` } : undefined}
       >
         <div className="studentCurriculumBannerText">
           <span className="studentCurriculumLevelBadge">{(curriculum.level || 'Course').toUpperCase()} LEVEL</span>
