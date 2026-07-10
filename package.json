@@ -5,11 +5,10 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "postinstall": "npm run install:all",
-    "install:all": "npm install --prefix server && npm install --prefix client",
+    "postinstall": "npm install --prefix server && npm install --prefix client",
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "start": "node index.js",
-    "build": "npm run install:all && npm run build:client && npm run sync:static",
+    "build": "npm run build:client && npm run sync:static",
     "build:client": "npm run build --prefix client",
     "sync:static": "node scripts/sync-static-dist.mjs",
     "lint": "npm run lint --prefix server && npm run lint --prefix client"
