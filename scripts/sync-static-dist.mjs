@@ -16,7 +16,7 @@ if (!fs.existsSync(indexFile)) {
 
 if (!fs.existsSync(htaccessFile)) {
   if (!fs.existsSync(htaccessSource)) {
-    throw new Error('client/public/.htaccess was not found. Hostinger static deployments need the SPA fallback file.');
+    throw new Error('client/public/.htaccess was not found. Apache-based static deployments need the SPA fallback file.');
   }
 
   fs.copyFileSync(htaccessSource, htaccessFile);

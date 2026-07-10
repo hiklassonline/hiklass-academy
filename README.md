@@ -7,11 +7,11 @@ Full-stack React/Vite and Node/Express project for HIKLASS Academy holiday cours
 ```text
 hiklass-holiday-courses/
   client/                 React + Vite frontend
-    public/.htaccess      Hostinger SPA fallback copied into dist
+    public/.htaccess      Apache SPA fallback copied into dist
     src/                  Pages, components, services, data, and assets
   server/                 Express API, email, admin routes, uploads
   storage/                Local JSON data used by the backend
-  scripts/                Hostinger deployment package builder
+  scripts/                Deployment package builder (works with any host)
 ```
 
 ## Local Installation
@@ -42,7 +42,7 @@ VITE_API_URL=http://localhost:5000/api
 VITE_SMARTSUPP_KEY=your_smartsupp_key
 ```
 
-`client/.env.production` currently contains the requested Hostinger example:
+`client/.env.production` currently contains the production example:
 
 ```env
 VITE_API_URL=https://hiklassacademy.com/api
@@ -53,13 +53,13 @@ If the Node backend serves the frontend from the same subdomain, set `VITE_API_U
 
 ## Backend Setup
 
-Create `server/.env` from `server/.env.example` and fill real values locally or in Hostinger's Node.js environment panel.
+Create `server/.env` from `server/.env.example` and fill real values locally or in your host's Node.js environment panel.
 
 ```env
 NODE_ENV=development
 PORT=5000
 CLIENT_URL=http://localhost:5173
-SMTP_HOST=smtp.hostinger.com
+SMTP_HOST=smtp.yourprovider.com
 SMTP_PORT=465
 SMTP_SECURE=true
 SMTP_USER=info@hiklassacademy.com
@@ -134,13 +134,15 @@ Admin routes redirect unauthenticated users to `/admin/login`:
 
 ## Security Notes
 
-Never put SMTP passwords, admin passwords, JWT secrets, or private credentials in React code or `VITE_*` variables. Keep real secrets in `server/.env` locally or Hostinger environment variables in production. `.env` files and logs are ignored; examples contain placeholders only.
+Never put SMTP passwords, admin passwords, JWT secrets, or private credentials in React code or `VITE_*` variables. Keep real secrets in `server/.env` locally or your host's environment variables in production. `.env` files and logs are ignored; examples contain placeholders only.
 
 The frontend Smartsupp widget loads only when `VITE_SMARTSUPP_KEY` is set, and it is disabled on admin pages.
 
-## Hostinger Subdomain Deployment
+## Deployment
 
-Example subdomain:
+This project deploys to any host that supports Node.js (a VPS, Hostinger, Render, Railway, etc.), or to a static-only host for the frontend alone.
+
+Example domain:
 
 ```text
 hiklassacademy.com
@@ -152,9 +154,9 @@ Build the frontend:
 npm run build
 ```
 
-The frontend output is `client/dist`, and the root build also syncs it to `dist` for Hostinger GitHub/static deployments. The SPA fallback lives in `client/public/.htaccess`, so Vite copies it into the build during the build. Upload the contents of `client/dist` or root `dist` to the Hostinger subdomain document root, such as `public_html/academy` or the subdomain folder.
+The frontend output is `client/dist`, and the root build also syncs it to `dist` for static/GitHub-based deployments. The SPA fallback lives in `client/public/.htaccess`, so Vite copies it into the build during the build. Upload the contents of `client/dist` or root `dist` to your document root, such as `public_html/academy` or a subdomain folder.
 
-For Hostinger GitHub/static deployment, use:
+For static/GitHub deployment, use:
 
 ```text
 Install command: npm install
@@ -162,37 +164,37 @@ Build command: npm run build
 Publish/output directory: dist
 ```
 
-If Hostinger supports Node.js apps, deploy the backend with:
+If your host supports Node.js apps, deploy the backend with:
 
 ```text
 Application root: repository root
 Startup file: index.js
 Start command: npm start
-PORT: set by Hostinger or your env
+PORT: set by your host or your env
 ```
 
-If the Hostinger plan is shared hosting without Node.js, only the static frontend can be hosted there. Enrollment submission, admin APIs, saved orders, uploads, discount validation, and email delivery need a Hostinger Node.js app, VPS, or external Node backend.
+If your plan is shared/static hosting without Node.js, only the static frontend can be hosted there. Enrollment submission, admin APIs, saved orders, uploads, discount validation, and email delivery need a Node.js app, VPS, or external Node backend somewhere.
 
 Use the deployment builder for clean zip packages:
 
 ```powershell
-.\scripts\create-hostinger-deploy.ps1 -Clean
+.\scripts\create-deploy-package.ps1 -Clean
 ```
 
-The deployment builder runs lint and build first, excludes `node_modules`, logs, local `.env` files, existing storage JSON data, and generated working files, then creates a Node app package and a static `public_html` fallback package under `deploy/`.
+The deployment builder runs lint and build first, excludes `node_modules`, logs, local `.env` files, existing storage JSON data, and generated working files, then creates a Node app package and a static fallback package under `deploy/`.
 
-See `HOSTINGER_DEPLOYMENT.md` for the full Hostinger checklist.
+See `DEPLOYMENT.md` for the full deployment checklist.
 
 ## SMTP Email Setup
 
-Use Hostinger SMTP values:
+Use your email provider's SMTP values:
 
 ```env
-SMTP_HOST=smtp.hostinger.com
+SMTP_HOST=smtp.yourprovider.com
 SMTP_PORT=465
 SMTP_SECURE=true
 SMTP_USER=info@hiklassacademy.com
-SMTP_PASS=your_hostinger_email_password
+SMTP_PASS=your_email_password
 SMTP_FROM="HIKLASS Academy <info@hiklassacademy.com>"
 ```
 

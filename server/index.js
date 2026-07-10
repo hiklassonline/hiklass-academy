@@ -1094,7 +1094,7 @@ function smtpPassword() {
 }
 
 function smtpConfig(overrides = {}) {
-  const host = smtpOverride?.smtpHost || envValue('SMTP_HOST', 'MAIL_HOST', 'EMAIL_HOST') || 'smtp.hostinger.com';
+  const host = smtpOverride?.smtpHost || envValue('SMTP_HOST', 'MAIL_HOST', 'EMAIL_HOST');
   const port = Number(smtpOverride?.smtpPort || envValue('SMTP_PORT', 'MAIL_PORT') || 465);
   const secureValue = smtpOverride && typeof smtpOverride.smtpSecure === 'boolean'
     ? smtpOverride.smtpSecure
@@ -1113,10 +1113,7 @@ function smtpConfig(overrides = {}) {
 
 function smtpConfigCandidates() {
   const config = smtpConfig();
-  const hosts = [
-    'smtp.hostinger.com',
-    config.host,
-  ].filter(Boolean);
+  const hosts = [config.host].filter(Boolean);
   const uniqueHosts = [...new Set(hosts.map((host) => host.trim()).filter(Boolean))];
   const candidates = [];
   for (const host of uniqueHosts) {

@@ -2397,7 +2397,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
         { key: 'primaryWhatsApp', label: 'Primary WhatsApp', type: 'text' },
         { key: 'currency', label: 'Currency', type: 'text' },
         { key: 'timezone', label: 'Timezone', type: 'text' },
-        { key: 'smtpHost', label: 'SMTP Host', type: 'text', defaultValue: 'smtp.hostinger.com' },
+        { key: 'smtpHost', label: 'SMTP Host', type: 'text' },
         { key: 'smtpPort', label: 'SMTP Port', type: 'number', defaultValue: 465 },
         { key: 'smtpSecure', label: 'SMTP Secure (true = SSL/TLS on 465, false = STARTTLS on 587)', type: 'select', options: ['true', 'false'] },
         { key: 'smtpUser', label: 'SMTP Username (mailbox address)', type: 'email' },
