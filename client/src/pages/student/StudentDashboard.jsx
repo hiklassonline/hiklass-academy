@@ -49,7 +49,7 @@ function CircularProgress({ percent }) {
           strokeLinecap="round"
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
-        <text x="50%" y="47%" textAnchor="middle" fontSize="22" fontWeight="700" fill="#1E2F97">{percent}%</text>
+        <text x="50%" y="47%" textAnchor="middle" fontSize="22" fontWeight="700" fill="#0149CA">{percent}%</text>
         <text x="50%" y="63%" textAnchor="middle" fontSize="10" fill="#6B7280">Overall Progress</text>
       </svg>
     </div>
@@ -97,7 +97,7 @@ export default function StudentDashboard() {
           <CircularProgress percent={stats.enrollmentProgress} />
           <div className="studentStatsGrid">
             <div className="studentStatTile">
-              <span className="studentStatIcon" style={{ background: '#EEF1FD', color: '#1E2F97' }}><GraduationCap size={19} /></span>
+              <span className="studentStatIcon" style={{ background: '#EEF1FD', color: '#0149CA' }}><GraduationCap size={19} /></span>
               <div><strong>{stats.purchasedCourses}</strong><small>Purchased Courses</small></div>
             </div>
             <div className="studentStatTile">
@@ -117,7 +117,7 @@ export default function StudentDashboard() {
               <div><strong>{stats.paidPayments}</strong><small>Payments Completed</small></div>
             </div>
             <div className="studentStatTile">
-              <span className="studentStatIcon" style={{ background: '#EEF1FD', color: '#1E2F97' }}><CreditCard size={19} /></span>
+              <span className="studentStatIcon" style={{ background: '#EEF1FD', color: '#0149CA' }}><CreditCard size={19} /></span>
               <div><strong>{formatMoney(stats.totalPaid)}</strong><small>Total Paid</small></div>
             </div>
           </div>
@@ -227,7 +227,7 @@ export default function StudentDashboard() {
           <div className="studentCard">
             <div className="studentCardHead"><h3>Quick Actions</h3></div>
             <div className="studentQuickActions">
-              <a className="studentQuickActionBtn" href="/#courses" style={{ background: '#EEF1FD', color: '#1E2F97' }}>
+              <a className="studentQuickActionBtn" href="/#courses" style={{ background: '#EEF1FD', color: '#0149CA' }}>
                 <GraduationCap size={20} />Browse Courses
               </a>
               <a className="studentQuickActionBtn" href="/student/downloads" style={{ background: '#DCFCE7', color: '#16A34A' }}>

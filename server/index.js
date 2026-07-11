@@ -5,16 +5,32 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import nodemailer from 'nodemailer';
 import multer from 'multer';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import fs from 'fs';
 import fsp from 'fs/promises';
-import net from 'net';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import {
+  hasSmtpConfig,
+  smtpTimeoutMs,
+  smtpConfig,
+  smtpConfigCandidates,
+  createTransporter,
+  createVerifiedTransporter,
+  sendMailWithSmtpCandidates,
+  withTimeout,
+  explainSmtpError,
+  publicEmailFailureMessage,
+  checkSmtpPort,
+  setSmtpOverride,
+  verifySmtpOnStartup,
+} from './config/mailer.js';
+import { sendEmail, sendEnrollmentConfirmation, sendAdminNotification, sendPasswordReset, sendContactEmail } from './services/emailService.js';
+import { passwordResetTemplate, contactNotificationTemplate, testEmailTemplate } from './templates/emailTemplates.js';
+import { generateSecureToken } from './utils/tokens.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,7 +46,6 @@ const ORDERS_FILE = path.join(DATA_DIR, 'course-orders.json');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'info@hiklassacademy.com';
 const ADMIN_LOGIN_EMAIL = process.env.ADMIN_LOGIN_EMAIL || ADMIN_EMAIL || 'admin@hiklassacademy.com';
 let ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
-let smtpOverride = null;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-only-insecure-student-jwt-secret');
 if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
@@ -40,11 +55,12 @@ const STUDENT_TOKEN_EXPIRY = '30d';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const googleAuthClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'HIKLASS Academy';
-const ORDER_EMAIL_SENT_MESSAGE = '🎉 Your order has been received successfully! A confirmation email has been sent to your registered email address. Please check your inbox for your order details and further instructions.';
+const ORDER_EMAIL_SENT_MESSAGE = '🎉 Your enrollment request has been received successfully! A confirmation email has been sent to your registered email address. Please check your inbox (and spam folder if necessary). Our admissions team will contact you shortly.';
 const ORDER_EMAIL_INTRO = 'This automated email confirms that your order was saved successfully. Please keep this message for your records.';
 const EMAIL_LOGO_SVG_CID = 'hiklass-logo-horizontal-svg';
 const EMAIL_LOGO_PNG_CID = 'hiklass-email-logo-png';
 const EMAIL_WHATSAPP_SVG_CID = 'hiklass-whatsapp-svg';
+const EMAIL_WHATSAPP_PNG_CID = 'hiklass-whatsapp-png';
 const EMAIL_SOCIAL_ICONS_SVG_CID = 'hiklass-social-icons-svg';
 const WHATSAPP_PRIMARY = (process.env.WHATSAPP_PRIMARY || '237651251941').replace(/\D/g, '');
 const EMAIL_LOGO_DIRS = [
@@ -406,9 +422,12 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static(UPLOADS_DIR));
 
+const API_RATE_LIMIT_MAX = Number(process.env.API_RATE_LIMIT_MAX || (process.env.NODE_ENV === 'production' ? 600 : 2000));
+const ADMIN_LOGIN_RATE_LIMIT_MAX = Number(process.env.ADMIN_LOGIN_RATE_LIMIT_MAX || (process.env.NODE_ENV === 'production' ? 20 : 100));
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 120,
+  max: API_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests. Please wait a few minutes and try again.' },
@@ -420,7 +439,7 @@ const apiLimiter = rateLimit({
 
 const adminAuthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 15,
+  max: ADMIN_LOGIN_RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many login attempts. Please wait a few minutes and try again.' },
@@ -464,6 +483,22 @@ const testimonialLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many submissions. Please wait a few minutes and try again.' },
+});
+
+const testEmailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many test emails requested. Please wait a few minutes and try again.' },
+});
+
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many messages sent. Please wait a few minutes and try again.' },
 });
 
 app.use('/api', apiLimiter);
@@ -834,6 +869,7 @@ const STORAGE_FILES = {
   packages: path.join(DATA_DIR, 'packages.json'),
   students: path.join(DATA_DIR, 'students.json'),
   'student-accounts': path.join(DATA_DIR, 'student-accounts.json'),
+  'password-resets': path.join(DATA_DIR, 'password-resets.json'),
   payments: path.join(DATA_DIR, 'payments.json'),
   discounts: path.join(DATA_DIR, 'discounts.json'),
   instructors: path.join(DATA_DIR, 'instructors.json'),
@@ -854,6 +890,10 @@ const STORAGE_FILES = {
   'assignment-submissions': path.join(DATA_DIR, 'assignment-submissions.json'),
   'course-quizzes': path.join(DATA_DIR, 'course-quizzes.json'),
   'quiz-attempts': path.join(DATA_DIR, 'quiz-attempts.json'),
+  'blog-posts': path.join(DATA_DIR, 'blog-posts.json'),
+  'blog-categories': path.join(DATA_DIR, 'blog-categories.json'),
+  'blog-comments': path.join(DATA_DIR, 'blog-comments.json'),
+  'blog-subscribers': path.join(DATA_DIR, 'blog-subscribers.json'),
 };
 
 // One-time migration: if DATA_DIR was pointed at a new location (e.g. to survive
@@ -893,16 +933,6 @@ async function migrateLegacyDataFiles() {
       console.error(`Failed to migrate legacy data file ${fileName}:`, error);
     }
   }
-}
-
-await migrateLegacyDataFiles();
-await refreshCoursePriceCache();
-
-try {
-  const storedSettings = await readJsonFile('settings');
-  smtpOverride = storedSettings[0] || null;
-} catch (error) {
-  console.error('Could not load stored settings for SMTP override:', error);
 }
 
 async function readJsonFile(key) {
@@ -949,6 +979,233 @@ async function recordEmailDelivery({ id, recipient, subject, status, errorMessag
 
 function createAdminId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function slugify(value, fallback = 'item') {
+  const slug = cleanText(value, 120)
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+  return slug || `${fallback}-${Date.now()}`;
+}
+
+const BLOG_CATEGORY_SEEDS = [
+  ['digital-skills', 'Digital Skills', 'Practical technology skills for students and professionals.', 'Laptop', '#1E2F97'],
+  ['artificial-intelligence', 'Artificial Intelligence', 'AI tools, automation, prompts, and future work trends.', 'Brain', '#6D28D9'],
+  ['web-development', 'Web Development', 'Frontend, backend, websites, and coding career guides.', 'Code', '#2563EB'],
+  ['graphic-design', 'Graphic Design', 'Design thinking, branding, Canva, Photoshop, and creative careers.', 'PenTool', '#16A34A'],
+  ['video-editing', 'Video Editing', 'Editing workflows, content creation, motion graphics, and storytelling.', 'Video', '#EA580C'],
+  ['digital-marketing', 'Digital Marketing', 'Social media, SEO, analytics, campaigns, and business growth.', 'Megaphone', '#F59E0B'],
+  ['career-development', 'Career Development', 'Roadmaps, portfolios, freelancing, interviews, and workplace growth.', 'Briefcase', '#0F766E'],
+  ['student-resources', 'Student Resources', 'Guides, downloads, scholarships, productivity, and learning support.', 'BookOpen', '#D30D1A'],
+];
+
+function defaultBlogCategories() {
+  return BLOG_CATEGORY_SEEDS.map(([slug, name, description, icon, color], index) => ({
+    id: `cat-${slug}`,
+    slug,
+    name,
+    description,
+    icon,
+    color,
+    seoTitle: `${name} Articles | HIKLASS Academy`,
+    metaDescription: description,
+    order: index + 1,
+    status: 'Active',
+    createdAt: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+    updatedAt: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+  }));
+}
+
+function defaultBlogPosts() {
+  const now = Date.now();
+  const author = {
+    id: 'author-tah-terence',
+    name: 'Tah Terence',
+    role: 'Founder, CEO & Lead Instructor',
+    bio: 'Technology professional, creative strategist, and educator with over 15 years of experience in digital innovation, software development, creative media, and professional training.',
+    avatar: '',
+  };
+  return [
+    {
+      title: 'How AI Is Transforming Education and the Future of Work',
+      category: 'Artificial Intelligence',
+      categorySlug: 'artificial-intelligence',
+      excerpt: 'Discover how artificial intelligence is changing learning, business, creativity, and employment opportunities across the world.',
+      content: '## Why AI matters now\nArtificial intelligence is becoming a practical everyday tool for students, creators, administrators, and entrepreneurs. It can summarize lessons, explain difficult topics, draft business documents, support coding, and help teams work faster.\n\n## What learners should focus on\nStudents should learn how to ask better questions, verify AI output, combine AI with human judgment, and use tools ethically. The strongest digital professionals will not be replaced by AI; they will learn how to lead with it.\n\n## Practical ways to begin\nStart with prompt writing, AI research workflows, content planning, spreadsheet analysis, image generation, and automation. Then connect those skills to a real course, project, or business problem.\n\n> AI is most powerful when it supports clear thinking, not when it replaces it.\n\n## Related course\nHIKLASS Academy offers AI and future technology training for learners who want practical, project-based AI skills.',
+      tags: ['AI', 'Future of Work', 'Student Tips'],
+      relatedCourse: 'AI & Prompt Engineering',
+      readingTime: 8,
+      featured: true,
+      status: 'Published',
+      views: 1840,
+      likes: 92,
+      shares: 31,
+      publishedAt: new Date(now - 46 * 24 * 60 * 60 * 1000).toISOString(),
+      author,
+    },
+    {
+      title: 'A Complete Roadmap to Become a Full-Stack Developer',
+      category: 'Web Development',
+      categorySlug: 'web-development',
+      excerpt: 'A beginner-friendly path from HTML and CSS to React, Node.js, databases, deployment, and portfolio projects.',
+      content: '## Start with the web foundations\nLearn HTML for structure, CSS for layout, and JavaScript for interaction. Build small pages before moving to larger applications.\n\n## Add modern frontend skills\nReact helps you build reusable interfaces. Practice components, state, forms, routing, and API calls.\n\n## Learn backend thinking\nNode.js, Express, databases, authentication, and deployment help you build complete products.\n\n## Build proof\nYour portfolio should include a landing page, dashboard, authentication flow, API-backed app, and one real client-style project.',
+      tags: ['Coding', 'React', 'Career'],
+      relatedCourse: 'Web Development',
+      readingTime: 7,
+      featured: false,
+      status: 'Published',
+      views: 1260,
+      likes: 64,
+      shares: 22,
+      publishedAt: new Date(now - 43 * 24 * 60 * 60 * 1000).toISOString(),
+      author,
+    },
+    {
+      title: 'Top Graphic Design Trends in 2025 You Should Know',
+      category: 'Graphic Design',
+      categorySlug: 'graphic-design',
+      excerpt: 'Brand systems, AI-assisted design, bold typography, social-first layouts, and portfolio-ready creative direction.',
+      content: '## Design is becoming more strategic\nGood design is no longer only about making things attractive. Businesses need consistent brand systems, fast content workflows, and visuals that convert.\n\n## Trends worth learning\nFocus on layout hierarchy, accessible color, motion-ready assets, AI-assisted ideation, and templates that help brands publish faster.\n\n## Build a portfolio\nCreate social media campaigns, logos, flyers, landing page mockups, and brand guides. Show process, not only final images.',
+      tags: ['Canva', 'Photoshop', 'Design'],
+      relatedCourse: 'Graphic Design',
+      readingTime: 6,
+      featured: false,
+      status: 'Published',
+      views: 980,
+      likes: 51,
+      shares: 18,
+      publishedAt: new Date(now - 42 * 24 * 60 * 60 * 1000).toISOString(),
+      author: { ...author, name: 'Esther Ngokam', role: 'Creative Design Instructor' },
+    },
+    {
+      title: '10 Social Media Marketing Tips That Actually Work',
+      category: 'Digital Marketing',
+      categorySlug: 'digital-marketing',
+      excerpt: 'Simple, practical marketing habits for students, creators, small businesses, and growing brands.',
+      content: '## Choose one clear audience\nMarketing works when your message is specific. Define who you help and what problem you solve.\n\n## Build a repeatable content system\nUse educational posts, proof posts, offers, behind-the-scenes stories, and customer questions. Track what gets saves, comments, clicks, and enquiries.\n\n## Improve every week\nReview analytics, test better hooks, improve visuals, and connect your content to a real offer.',
+      tags: ['Marketing', 'Business', 'Social Media'],
+      relatedCourse: 'Digital Marketing',
+      readingTime: 5,
+      featured: false,
+      status: 'Published',
+      views: 1110,
+      likes: 59,
+      shares: 29,
+      publishedAt: new Date(now - 40 * 24 * 60 * 60 * 1000).toISOString(),
+      author: { ...author, name: 'Kiven Emmanuel', role: 'Digital Marketing Instructor' },
+    },
+  ].map((post, index) => ({
+    id: `post-${slugify(post.title)}`,
+    slug: slugify(post.title),
+    subtitle: post.excerpt,
+    image: '',
+    imageAlt: post.title,
+    imageCaption: '',
+    commentsEnabled: true,
+    seoTitle: post.title,
+    metaDescription: post.excerpt,
+    focusKeyword: post.category,
+    canonicalUrl: '',
+    noIndex: false,
+    noFollow: false,
+    scheduledAt: '',
+    createdAt: new Date(now - (60 - index) * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(now - (10 - index) * 24 * 60 * 60 * 1000).toISOString(),
+    ...post,
+  }));
+}
+
+async function blogCategoriesWithDefaults() {
+  const stored = await readJsonFile('blog-categories');
+  return stored.length ? stored : defaultBlogCategories();
+}
+
+async function blogPostsWithDefaults() {
+  const stored = await readJsonFile('blog-posts');
+  return stored.length ? stored : defaultBlogPosts();
+}
+
+function normalizeBlogCategory(input = {}, existing = {}) {
+  const name = cleanText(input.name ?? existing.name, 100);
+  const slug = slugify(input.slug || name || existing.slug, 'category');
+  const now = new Date().toISOString();
+  return {
+    id: existing.id || input.id || createAdminId('cat'),
+    name,
+    slug,
+    description: cleanText(input.description ?? existing.description, 500),
+    icon: cleanText(input.icon ?? existing.icon ?? 'BookOpen', 40),
+    color: cleanText(input.color ?? existing.color ?? '#1E2F97', 20),
+    seoTitle: cleanText(input.seoTitle ?? existing.seoTitle, 160),
+    metaDescription: cleanText(input.metaDescription ?? existing.metaDescription, 220),
+    order: Number(input.order ?? existing.order ?? 0),
+    status: cleanText(input.status ?? existing.status ?? 'Active', 30),
+    createdAt: existing.createdAt || input.createdAt || now,
+    updatedAt: now,
+  };
+}
+
+function normalizeBlogPost(input = {}, existing = {}) {
+  const title = cleanText(input.title ?? existing.title, 180);
+  const slug = slugify(input.slug || title || existing.slug, 'post');
+  const category = cleanText(input.category ?? existing.category ?? 'Digital Skills', 100);
+  const categorySlug = slugify(input.categorySlug || category);
+  const now = new Date().toISOString();
+  const publishedAt = input.publishedAt || existing.publishedAt || (input.status === 'Published' ? now : '');
+  const author = typeof input.author === 'object' && input.author
+    ? input.author
+    : existing.author || {};
+  return {
+    id: existing.id || input.id || createAdminId('post'),
+    title,
+    slug,
+    subtitle: cleanText(input.subtitle ?? existing.subtitle, 220),
+    excerpt: cleanText(input.excerpt ?? existing.excerpt, 500),
+    content: cleanMultilineText(input.content ?? existing.content, 20000),
+    image: cleanText(input.image ?? existing.image, 500),
+    imageAlt: cleanText(input.imageAlt ?? existing.imageAlt ?? title, 180),
+    imageCaption: cleanText(input.imageCaption ?? existing.imageCaption, 220),
+    category,
+    categorySlug,
+    tags: Array.isArray(input.tags)
+      ? input.tags.map((tag) => cleanText(tag, 50)).filter(Boolean).slice(0, 12)
+      : cleanText(input.tags ?? existing.tags?.join(', ') ?? '', 400).split(',').map((tag) => cleanText(tag, 50)).filter(Boolean).slice(0, 12),
+    relatedCourse: cleanText(input.relatedCourse ?? existing.relatedCourse, 120),
+    status: cleanText(input.status ?? existing.status ?? 'Draft', 40),
+    readingTime: Math.max(1, Number(input.readingTime ?? existing.readingTime ?? 5)),
+    views: Math.max(0, Number(input.views ?? existing.views ?? 0)),
+    likes: Math.max(0, Number(input.likes ?? existing.likes ?? 0)),
+    shares: Math.max(0, Number(input.shares ?? existing.shares ?? 0)),
+    featured: Boolean(input.featured ?? existing.featured),
+    commentsEnabled: input.commentsEnabled === undefined ? existing.commentsEnabled !== false : Boolean(input.commentsEnabled),
+    publishedAt,
+    scheduledAt: cleanText(input.scheduledAt ?? existing.scheduledAt, 80),
+    seoTitle: cleanText(input.seoTitle ?? existing.seoTitle ?? title, 180),
+    metaDescription: cleanText(input.metaDescription ?? existing.metaDescription ?? input.excerpt ?? existing.excerpt, 240),
+    focusKeyword: cleanText(input.focusKeyword ?? existing.focusKeyword, 120),
+    canonicalUrl: cleanText(input.canonicalUrl ?? existing.canonicalUrl, 500),
+    noIndex: Boolean(input.noIndex ?? existing.noIndex),
+    noFollow: Boolean(input.noFollow ?? existing.noFollow),
+    author: {
+      id: cleanText(author.id || existing.author?.id || 'author-admin', 80),
+      name: cleanText(author.name || existing.author?.name || 'HIKLASS Academy', 100),
+      role: cleanText(author.role || existing.author?.role || 'Academy Editorial Team', 120),
+      bio: cleanText(author.bio || existing.author?.bio || 'Digital education team at HIKLASS Academy.', 700),
+      avatar: cleanText(author.avatar || existing.author?.avatar || '', 500),
+    },
+    createdAt: existing.createdAt || input.createdAt || now,
+    updatedAt: now,
+  };
+}
+
+function publicBlogPost(post, comments = []) {
+  const approvedComments = comments.filter((comment) => comment.postId === post.id && comment.status === 'Approved');
+  return {
+    ...post,
+    commentCount: approvedComments.length,
+  };
 }
 
 function defaultAdminCourses() {
@@ -1062,264 +1319,6 @@ async function recordActivity(action, target, detail = '') {
   }
 }
 
-function hasSmtpConfig() {
-  const config = smtpConfig();
-  return Boolean(config.host && config.port && config.user && config.pass);
-}
-
-function smtpTimeoutMs() {
-  return Number(process.env.SMTP_TIMEOUT_MS || 30000);
-}
-
-function envValue(...keys) {
-  const value = keys.map((key) => process.env[key]).find((item) => item);
-  if (value === undefined || value === null) return '';
-  return String(value).trim().replace(/^(['"])(.*)\1$/, '$2');
-}
-
-function smtpPassword() {
-  const encodedPassword = envValue('SMTP_PASS_BASE64');
-  const validBase64 = /^[A-Za-z0-9+/]+={0,2}$/.test(encodedPassword) && encodedPassword.length % 4 === 0;
-  if (validBase64) {
-    try {
-      const decodedPassword = Buffer.from(encodedPassword, 'base64').toString('utf8');
-      if (decodedPassword) return decodedPassword;
-    } catch (error) {
-      console.error('SMTP_PASS_BASE64 could not be decoded:', error?.message || error);
-    }
-  } else if (encodedPassword) {
-    console.error('SMTP_PASS_BASE64 is not valid Base64. Falling back to SMTP_PASS.');
-  }
-  return envValue('SMTP_PASS', 'SMTP_PASSWORD', 'MAIL_PASS', 'MAIL_PASSWORD', 'EMAIL_PASS', 'EMAIL_PASSWORD');
-}
-
-function smtpConfig(overrides = {}) {
-  const host = smtpOverride?.smtpHost || envValue('SMTP_HOST', 'MAIL_HOST', 'EMAIL_HOST');
-  const port = Number(smtpOverride?.smtpPort || envValue('SMTP_PORT', 'MAIL_PORT') || 465);
-  const secureValue = smtpOverride && typeof smtpOverride.smtpSecure === 'boolean'
-    ? smtpOverride.smtpSecure
-    : (envValue('SMTP_SECURE', 'MAIL_SECURE') || 'true');
-  const user = smtpOverride?.smtpUser || envValue('SMTP_USER', 'SMTP_USERNAME', 'MAIL_USER', 'MAIL_USERNAME', 'EMAIL_USER');
-  const pass = smtpOverride?.smtpPass || smtpPassword();
-  return {
-    host: overrides.host || host,
-    port: overrides.port || port,
-    secure: typeof overrides.secure === 'boolean' ? overrides.secure : String(secureValue).toLowerCase() === 'true',
-    user,
-    pass,
-    from: smtpOverride?.smtpFrom || envValue('SMTP_FROM') || `"${BUSINESS_NAME}" <${user}>`,
-  };
-}
-
-function smtpConfigCandidates() {
-  const config = smtpConfig();
-  const hosts = [config.host].filter(Boolean);
-  const uniqueHosts = [...new Set(hosts.map((host) => host.trim()).filter(Boolean))];
-  const candidates = [];
-  for (const host of uniqueHosts) {
-    candidates.push(smtpConfig({ host }));
-    candidates.push(smtpConfig({ host, port: 587, secure: false }));
-    candidates.push(smtpConfig({ host, port: 465, secure: true }));
-  }
-  return [...new Map(candidates.map((config) => [`${config.host}:${config.port}:${config.secure}`, config])).values()];
-}
-
-function createTransporter(config = smtpConfig()) {
-  if (!hasSmtpConfig()) return null;
-  const timeout = smtpTimeoutMs();
-  return nodemailer.createTransport({
-    host: config.host,
-    port: config.port,
-    secure: config.secure,
-    family: 4,
-    connectionTimeout: timeout,
-    greetingTimeout: timeout,
-    socketTimeout: timeout,
-    tls: {
-      servername: config.host,
-    },
-    auth: {
-      user: config.user,
-      pass: config.pass,
-    },
-  });
-}
-
-async function createVerifiedTransporter() {
-  if (!hasSmtpConfig()) return null;
-
-  let lastError;
-  let lastConfig;
-  const attempts = [];
-  for (const config of smtpConfigCandidates()) {
-    let transporter;
-    try {
-      await checkSmtpPort(config);
-      transporter = createTransporter(config);
-      await withTimeout(
-        transporter.verify(),
-        smtpTimeoutMs(),
-        'SMTP verification timed out before authentication completed.',
-      );
-      return { transporter, config };
-    } catch (error) {
-      transporter?.close();
-      lastError = error;
-      lastConfig = config;
-      attempts.push({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        code: error?.code || 'SMTP_ERROR',
-        message: explainSmtpError(error, config),
-      });
-      console.error(`SMTP verification failed for ${config.host}:${config.port}:`, explainSmtpError(error, config));
-    }
-  }
-
-  const error = lastError || new Error('SMTP verification failed for every configured host.');
-  error.smtpAttempts = attempts;
-  error.smtpLastConfig = lastConfig;
-  throw error;
-}
-
-async function sendMailWithSmtpCandidates(mailOptions, label = 'email') {
-  if (!hasSmtpConfig()) {
-    throw new Error('SMTP is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS to server/.env.');
-  }
-
-  let lastError;
-  let lastConfig;
-  const attempts = [];
-
-  for (const config of smtpConfigCandidates()) {
-    const mailVariants = [
-      mailOptions,
-      mailOptions.attachments?.length ? { ...mailOptions, attachments: [] } : null,
-    ].filter(Boolean);
-
-    for (const variant of mailVariants) {
-      let transporter;
-      const variantLabel = variant.attachments?.length ? 'with attachments' : 'without attachments';
-      try {
-        await checkSmtpPort(config);
-        transporter = createTransporter(config);
-        await withTimeout(
-          transporter.verify(),
-          smtpTimeoutMs(),
-          'SMTP verification timed out before authentication completed.',
-        );
-
-        const info = await withTimeout(
-          transporter.sendMail({
-            ...variant,
-            from: config.from,
-          }),
-          smtpTimeoutMs(),
-          'SMTP timed out before email delivery completed.',
-        );
-
-        return { info, config, attempts };
-      } catch (error) {
-        lastError = error;
-        lastConfig = config;
-        const message = explainSmtpError(error, config);
-        attempts.push({
-          host: config.host,
-          port: config.port,
-          secure: config.secure,
-          attachments: Boolean(variant.attachments?.length),
-          code: error?.code || 'SMTP_ERROR',
-          message,
-        });
-        console.error(`SMTP ${label} failed for ${config.host}:${config.port} ${variantLabel}:`, message);
-      } finally {
-        transporter?.close();
-      }
-    }
-  }
-
-  const error = lastError || new Error(`${label} delivery failed for every configured SMTP host.`);
-  error.smtpAttempts = attempts;
-  error.smtpLastConfig = lastConfig;
-  throw error;
-}
-
-function withTimeout(promise, ms, message) {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(message)), ms);
-  });
-
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-}
-
-function explainSmtpError(error, config = smtpConfig()) {
-  if (error?.code === 'EACCES') {
-    return `Outbound SMTP is blocked by this machine or network for ${config.host}:${config.port}. Allow SMTP submission or deploy from a host that permits it.`;
-  }
-
-  if (error?.code === 'ENOTFOUND') {
-    return `SMTP host ${config.host} does not resolve in DNS. Check SMTP_HOST in server/.env.`;
-  }
-
-  if (error?.code === 'ECONNREFUSED') {
-    return `SMTP host ${config.host}:${config.port} refused the connection. Check the host, port, and secure setting.`;
-  }
-
-  if (error?.code === 'ETIMEDOUT' || /timed out/i.test(error?.message || '')) {
-    return `SMTP connection to ${config.host}:${config.port} timed out. This is usually a firewall, ISP, or hosting outbound-port block.`;
-  }
-
-  if (error?.code === 'EAUTH') {
-    return `SMTP authentication failed for ${config.user || 'the configured user'} on ${config.host}:${config.port}. Check SMTP_USER and SMTP_PASS in the production environment variables.`;
-  }
-
-  return error?.message || 'Email delivery failed for an unknown SMTP reason.';
-}
-
-function publicEmailFailureMessage(error) {
-  const reason = error?.code === 'EAUTH'
-    ? 'the email service login failed'
-    : error?.code === 'ENOTFOUND'
-      ? 'the email server could not be found'
-      : error?.code === 'ECONNREFUSED'
-        ? 'the email server refused the connection'
-        : error?.code === 'ETIMEDOUT' || /timed out/i.test(error?.message || '')
-          ? 'the email server connection timed out'
-          : 'the email service is temporarily unavailable';
-
-  return `Your order was saved successfully, but the confirmation email could not be sent because ${reason}. HIKLASS Academy will contact you shortly.`;
-}
-
-function checkSmtpPort(config = smtpConfig()) {
-  if (!hasSmtpConfig()) {
-    return Promise.reject(new Error('SMTP is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS to server/.env.'));
-  }
-
-  return new Promise((resolve, reject) => {
-    const socket = net.createConnection({
-      host: config.host,
-      port: config.port,
-      family: 4,
-      timeout: Math.min(smtpTimeoutMs(), 6000),
-    });
-
-    socket.once('connect', () => {
-      socket.destroy();
-      resolve();
-    });
-
-    socket.once('timeout', () => {
-      socket.destroy();
-      reject(new Error(`SMTP connection timed out for ${config.host}:${config.port}.`));
-    });
-
-    socket.once('error', (error) => {
-      reject(error);
-    });
-  });
-}
 
 function courseTitle(course) {
   return typeof course === 'string' ? course : course?.title || 'Unknown course';
@@ -1357,18 +1356,26 @@ function emailLogoAssets() {
     svgPath: findLogoAsset('logo-horizontal.svg'),
     pngPath: findLogoAsset('email.png') || findLogoAsset('logo-horizontal.png'),
     whatsappSvgPath: findLogoAsset('ui/whatsapp.svg'),
+    whatsappPngPath: findLogoAsset('ui/whatsapp-email.png'),
     socialIconsSvgPath: findLogoAsset('social-icons.svg'),
   };
 }
 
 function emailLogoAttachments() {
-  const { pngPath } = emailLogoAssets();
+  const { pngPath, whatsappPngPath } = emailLogoAssets();
   return [
     pngPath
       ? {
           filename: path.basename(pngPath),
           path: pngPath,
           cid: EMAIL_LOGO_PNG_CID,
+        }
+      : null,
+    whatsappPngPath
+      ? {
+          filename: path.basename(whatsappPngPath),
+          path: whatsappPngPath,
+          cid: EMAIL_WHATSAPP_PNG_CID,
         }
       : null,
   ].filter(Boolean);
@@ -1662,6 +1669,7 @@ function studentInformationCard(order) {
       ['Phone', order.phone],
       ['Learning Mode', order.mode],
       ['Payment Method', order.paymentMethod],
+      ['Enrollment Date', formatSubmissionDate(order.createdAt)],
     ]),
   });
 }
@@ -1745,14 +1753,17 @@ function ctaBlock({
 }
 
 function assistanceStrip() {
-  const whatsappIcon = '<span style="display:inline-block;width:34px;height:34px;border-radius:50%;background:#1B5E20;color:#FFFFFF;font-size:20px;line-height:34px;text-align:center;font-weight:700">W</span>';
+  const { whatsappPngPath } = emailLogoAssets();
+  const whatsappIcon = whatsappPngPath
+    ? `<img src="cid:${EMAIL_WHATSAPP_PNG_CID}" width="34" height="34" alt="WhatsApp" style="display:block;width:34px;height:34px;border-radius:50%;border:0;outline:none;text-decoration:none">`
+    : '<span style="display:inline-block;width:34px;height:34px;border-radius:50%;background:#1B5E20;color:#FFFFFF;font-size:20px;line-height:34px;text-align:center;font-weight:700">W</span>';
   const whatsappMessage = encodeURIComponent('Hi HIKLASS Academy, I need assistance.');
   const primaryWhatsAppLink = `https://wa.me/${WHATSAPP_PRIMARY}?text=${whatsappMessage}`;
 
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#F3F7FF" style="border-collapse:separate;background:#F3F7FF;border-radius:8px;margin-top:34px">
       <tr>
-        <td class="hiklass-contact-column" width="24%" valign="middle" style="padding:18px 14px;border-right:1px solid #CBD5E1">
+        <td class="hiklass-contact-column" width="30%" valign="middle" style="padding:18px 14px;border-right:1px solid #CBD5E1">
           <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
             <tr>
               <td width="46">${emailIconCircle('&#127911;', '#1E2F97', '#DCEBFF')}</td>
@@ -1760,22 +1771,18 @@ function assistanceStrip() {
             </tr>
           </table>
         </td>
-        <td class="hiklass-contact-column" width="25%" valign="top" style="padding:18px 14px;border-right:1px solid #CBD5E1">
+        <td class="hiklass-contact-column" width="32%" valign="top" style="padding:18px 14px;border-right:1px solid #CBD5E1">
           <a href="${primaryWhatsAppLink}" style="color:#1B5E20;font-size:14px;line-height:18px;font-weight:700;text-decoration:none">WhatsApp</a>
           <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:5px">
             <tr>
               <td width="34" valign="top"><a href="${primaryWhatsAppLink}" style="text-decoration:none">${whatsappIcon}</a></td>
-              <td style="padding-left:8px;color:#111827;font-size:13px;line-height:18px;font-weight:700">
-                <a href="${primaryWhatsAppLink}" style="color:#111827;text-decoration:none">+237 651 251 941</a>
+              <td style="padding-left:8px;white-space:nowrap;color:#111827;font-size:13px;line-height:18px;font-weight:700">
+                <a href="${primaryWhatsAppLink}" style="color:#111827;text-decoration:none;white-space:nowrap">+237 651 251 941</a>
               </td>
             </tr>
           </table>
         </td>
-        <td class="hiklass-contact-column" width="22%" valign="top" style="padding:18px 14px;border-right:1px solid #CBD5E1">
-          <div style="color:#1E2F97;font-size:14px;line-height:18px;font-weight:700">&#9993;&nbsp;&nbsp;Email</div>
-          <div style="margin-top:8px;color:#111827;font-size:13px;line-height:18px">info@hiklassacademy.com</div>
-        </td>
-        <td class="hiklass-contact-column" width="29%" valign="top" style="padding:18px 14px">
+        <td class="hiklass-contact-column" width="38%" valign="top" style="padding:18px 14px">
           <div style="color:#1E2F97;font-size:14px;line-height:18px;font-weight:700">&#9716;&nbsp;&nbsp;Office Hours</div>
           <div style="margin-top:8px;color:#111827;font-size:13px;line-height:18px">Mon - Sat: 8:00 AM - 6:00 PM<br>Sunday: Closed</div>
         </td>
@@ -1792,6 +1799,7 @@ function footerBlock() {
         <td align="center" style="padding-top:18px">
           <div style="color:#1E2F97;font-size:20px;line-height:24px;font-weight:700">HIKLASS Academy</div>
           <div style="color:#374151;font-size:14px;line-height:20px">Experience <span style="color:#D30D1A">Brighter</span> Success</div>
+          <div style="margin-top:10px"><a href="https://hiklassacademy.com" style="color:#0149CA;font-size:13px;line-height:18px;font-weight:700;text-decoration:none">www.hiklassacademy.com</a></div>
           <div style="margin-top:14px">${socialIcons}</div>
           <div style="margin-top:14px;color:#6B7280;font-size:12px;line-height:18px">&copy; 2026 HIKLASS Digital Agency. All Rights Reserved.</div>
         </td>
@@ -1799,7 +1807,48 @@ function footerBlock() {
     </table>`;
 }
 
-function emailShell({ heroTitle, heroSubtitle, greeting, intro, contentHtml, ctaIcon, ctaLabel, ctaMessage }) {
+function getClientBaseUrl() {
+  return (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim().replace(/\/$/, '');
+}
+
+async function findStudentAccountByEmail(email) {
+  if (!email) return null;
+  const normalized = String(email).trim().toLowerCase();
+  if (!normalized) return null;
+  const accounts = await readJsonFile('student-accounts');
+  return accounts.find((account) => String(account.email || '').trim().toLowerCase() === normalized) || null;
+}
+
+function dashboardCtaBlock({ hasAccount, clientUrl = getClientBaseUrl() } = {}) {
+  const dashboardUrl = `${clientUrl}/student/dashboard`;
+  const signupUrl = `${clientUrl}/student/register`;
+  const loginUrl = `${clientUrl}/student/login`;
+
+  const primaryUrl = hasAccount ? dashboardUrl : signupUrl;
+  const primaryLabel = hasAccount ? 'Go to My Dashboard' : 'Create Your Student Account';
+
+  return `
+    <table role="presentation" align="center" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:26px 0 0">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate">
+            <tr>
+              <td align="center" bgcolor="#1E2F97" style="background:#1E2F97;border-radius:9px">
+                <a href="${primaryUrl}" style="display:inline-block;padding:14px 32px;color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:20px;font-weight:700;text-decoration:none">${escapeHtml(primaryLabel)} &rarr;</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:12px 0 0;text-align:center;color:#6B7280;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:20px">
+      ${hasAccount
+        ? 'Track your courses, join video calls, and message your instructors &mdash; all in one place.'
+        : `Already have a student account? <a href="${loginUrl}" style="color:#0149CA;font-weight:700;text-decoration:none">Log in here</a>.`}
+    </p>`;
+}
+
+function emailShell({ heroTitle, heroSubtitle, greeting, intro, contentHtml, ctaIcon, ctaLabel, ctaMessage, extraHtml = '' }) {
   return `
     <!doctype html>
     <html>
@@ -1823,6 +1872,7 @@ function emailShell({ heroTitle, heroSubtitle, greeting, intro, contentHtml, cta
                       <p style="margin:14px 0 20px;color:#4B5563;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;font-weight:400">${intro}</p>
                       ${contentHtml}
                       ${ctaBlock({ icon: ctaIcon, label: ctaLabel, message: ctaMessage })}
+                      ${extraHtml}
                       ${assistanceStrip()}
                       ${footerBlock()}
                     </div>
@@ -1860,7 +1910,7 @@ function enrichOrder(order) {
   };
 }
 
-function studentTemplate(order) {
+function studentTemplate(order, { hasAccount = false } = {}) {
   return emailShell({
     heroTitle: 'Enrollment Request Received',
     heroSubtitle: 'Thank you for choosing HIKLASS Academy.',
@@ -1869,6 +1919,7 @@ function studentTemplate(order) {
     contentHtml: `
       ${twoColumnRow(selectedCoursesCard(order), selectedPackageCard(order))}
       ${twoColumnRow(studentInformationCard(order), totalAmountCard(order))}`,
+    extraHtml: dashboardCtaBlock({ hasAccount }),
   });
 }
 
@@ -1921,9 +1972,16 @@ function enrollmentStatusTemplate(order) {
   });
 }
 
-function orderPlainText(order, heading = 'Enrollment Request Received') {
+function orderPlainText(order, heading = 'Enrollment Request Received', hasAccount = null) {
   const courseLines = (order.courses || []).map((course) => `- ${courseTitle(course)}: ${formatXaf(coursePrice(course))}`);
   const packageLines = (order.packages || []).map((item) => `- ${packageName(item)} (${packageDuration(item)}): ${formatXaf(packagePrice(item))}`);
+  const clientUrl = getClientBaseUrl();
+  const dashboardLines =
+    hasAccount === null
+      ? []
+      : hasAccount
+        ? ['', `Go to your dashboard: ${clientUrl}/student/dashboard`]
+        : ['', `Create your student account: ${clientUrl}/student/register`, `Already have an account? Log in: ${clientUrl}/student/login`];
 
   return [
     `HIKLASS Academy - ${heading}`,
@@ -1946,6 +2004,7 @@ function orderPlainText(order, heading = 'Enrollment Request Received') {
     `Discount code: ${order.discountCode || 'None'}`,
     `Discount: -${formatXaf(orderDiscountAmount(order))}`,
     `Grand total: ${formatXaf(orderGrandTotal(order))}`,
+    ...dashboardLines,
     '',
     'Need assistance? WhatsApp +237 651 251 941 or email info@hiklassacademy.com.',
   ].join('\n');
@@ -1967,46 +2026,49 @@ function enrollmentStatusPlainText(order) {
 
 async function sendOrderEmails(order) {
   const logoAttachments = emailLogoAttachments();
-  const studentSubject = 'Enrollment Request Received';
-  let studentEmail;
-  try {
-    studentEmail = await sendMailWithSmtpCandidates({
-      to: order.email,
-      subject: studentSubject,
-      text: orderPlainText(order),
-      html: studentTemplate(order),
-      attachments: logoAttachments,
-    }, 'student confirmation email');
-    await recordEmailDelivery({
-      id: `${order.id}-student`,
-      recipient: order.email,
-      subject: studentSubject,
-      status: 'Sent',
-    });
-  } catch (error) {
+  const studentSubject = '🎉 Welcome to HIKLASS Academy';
+  const existingAccount = await findStudentAccountByEmail(order.email);
+  const hasAccount = Boolean(existingAccount);
+  const studentResult = await sendEnrollmentConfirmation({
+    to: order.email,
+    subject: studentSubject,
+    text: orderPlainText(order, 'Enrollment Request Received', hasAccount),
+    html: studentTemplate(order, { hasAccount }),
+    attachments: logoAttachments,
+  });
+
+  if (!studentResult.success) {
     await recordEmailDelivery({
       id: `${order.id}-student`,
       recipient: order.email,
       subject: studentSubject,
       status: 'Failed',
-      errorMessage: explainSmtpError(error, error.smtpLastConfig),
+      errorMessage: explainSmtpError(studentResult.error, studentResult.error?.smtpLastConfig),
     });
-    throw error;
+    throw studentResult.error;
   }
+
+  await recordEmailDelivery({
+    id: `${order.id}-student`,
+    recipient: order.email,
+    subject: studentSubject,
+    status: 'Sent',
+  });
 
   let adminEmailSent = false;
   const warnings = [];
-  const adminSubject = `New Course Enrollment Request from ${order.name}`;
+  const adminSubject = `📥 New Enrollment Received - ${order.name}`;
 
-  try {
-    await sendMailWithSmtpCandidates({
-      to: ADMIN_EMAIL,
-      replyTo: order.email,
-      subject: adminSubject,
-      text: orderPlainText(order, 'New Course Enrollment Request'),
-      html: adminTemplate(order),
-      attachments: logoAttachments,
-    }, 'admin notification email');
+  const adminResult = await sendAdminNotification({
+    to: ADMIN_EMAIL,
+    replyTo: order.email,
+    subject: adminSubject,
+    text: orderPlainText(order, 'New Course Enrollment Request'),
+    html: adminTemplate(order),
+    attachments: logoAttachments,
+  });
+
+  if (adminResult.success) {
     adminEmailSent = true;
     await recordEmailDelivery({
       id: `${order.id}-admin`,
@@ -2014,8 +2076,8 @@ async function sendOrderEmails(order) {
       subject: adminSubject,
       status: 'Sent',
     });
-  } catch (error) {
-    const warning = `admin: ${explainSmtpError(error, error.smtpLastConfig)}`;
+  } else {
+    const warning = `admin: ${explainSmtpError(adminResult.error, adminResult.error?.smtpLastConfig)}`;
     warnings.push(warning);
     console.warn('Partial email delivery failure:', warning);
     await recordEmailDelivery({
@@ -2023,12 +2085,12 @@ async function sendOrderEmails(order) {
       recipient: ADMIN_EMAIL,
       subject: adminSubject,
       status: 'Failed',
-      errorMessage: explainSmtpError(error, error.smtpLastConfig),
+      errorMessage: explainSmtpError(adminResult.error, adminResult.error?.smtpLastConfig),
     });
   }
 
   return {
-    studentEmailSent: Boolean(studentEmail.info),
+    studentEmailSent: Boolean(studentResult.info),
     adminEmailSent,
     warnings,
   };
@@ -2065,11 +2127,58 @@ async function sendEnrollmentStatusEmail(order) {
   }
 }
 
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', async (_req, res) => {
+  let databaseStatus = 'Connected';
+  try {
+    await fsp.access(DATA_DIR);
+  } catch {
+    databaseStatus = 'Disconnected';
+  }
+
+  const smtpConfigured = hasSmtpConfig();
+  let smtpStatus = 'Not Configured';
+  if (smtpConfigured) {
+    try {
+      const { transporter } = await createVerifiedTransporter();
+      transporter?.close();
+      smtpStatus = 'Connected';
+    } catch {
+      smtpStatus = 'Disconnected';
+    }
+  }
+
   res.json({
     success: true,
-    message: 'HIKLASS Academy backend is running',
+    smtp: smtpStatus,
+    database: databaseStatus,
+    server: 'Running',
   });
+});
+
+app.get('/api/test-email', testEmailLimiter, async (req, res) => {
+  const recipient = cleanText(req.query.to, 180) || smtpConfig().user;
+  if (!isEmail(recipient)) {
+    res.status(400).json({ success: false, message: 'Provide a valid recipient via ?to=you@example.com or configure SMTP_USER.' });
+    return;
+  }
+
+  const sentAt = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+  const result = await sendEmail(
+    {
+      to: recipient,
+      subject: '✅ HIKLASS Academy SMTP Test',
+      html: testEmailTemplate({ recipient, sentAt }),
+      text: `SMTP Working Successfully. Sent to ${recipient} at ${sentAt}.`,
+    },
+    'test email',
+  );
+
+  if (!result.success) {
+    res.status(502).json({ success: false, message: explainSmtpError(result.error, result.error?.smtpLastConfig) });
+    return;
+  }
+
+  res.json({ success: true, message: 'SMTP Working Successfully' });
 });
 
 app.get('/api/email/status', emailStatusLimiter, async (_req, res) => {
@@ -3367,7 +3476,7 @@ app.put('/api/admin/settings', requireAdmin, async (req, res) => {
     if (!settings.smtpPort) settings.smtpPort = existing.smtpPort || 465;
 
     await writeJsonFile('settings', [settings]);
-    smtpOverride = settings;
+    setSmtpOverride(settings);
     await recordActivity('Updated settings', 'settings', settings.academyName);
     res.json({ settings: publicSettings(settings) });
   } catch (error) {
@@ -3659,6 +3768,406 @@ app.post('/api/api/enrollments', orderLimiter, handleOrder);
 app.post('/enrollments', orderLimiter, handleOrder);
 app.post('/api/enquiries', orderLimiter, handleOrder);
 
+app.post('/api/contact', contactLimiter, async (req, res) => {
+  try {
+    const name = cleanText(req.body?.name, 90);
+    const email = cleanText(req.body?.email, 120).toLowerCase();
+    const phone = cleanText(req.body?.phone, 40);
+    const subject = cleanText(req.body?.subject, 150);
+    const message = cleanText(req.body?.message, 2000);
+
+    if (name.length < 2) { res.status(400).json({ message: 'Your name is required.' }); return; }
+    if (!isEmail(email)) { res.status(400).json({ message: 'A valid email address is required.' }); return; }
+    if (message.length < 10) { res.status(400).json({ message: 'Please include a short message (at least 10 characters).' }); return; }
+
+    const result = await sendContactEmail({ name, email, phone, subject, message, adminEmail: ADMIN_EMAIL });
+
+    await recordEmailDelivery({
+      id: `contact-${Date.now()}`,
+      recipient: ADMIN_EMAIL,
+      subject: `New Contact Form Message from ${name}`,
+      status: result.success ? 'Sent' : 'Failed',
+      errorMessage: result.success ? '' : explainSmtpError(result.error, result.error?.smtpLastConfig),
+    });
+
+    await recordEmailDelivery({
+      id: `contact-autoreply-${Date.now()}`,
+      recipient: email,
+      subject: 'We Received Your Message - HIKLASS Academy',
+      status: result.autoReplySent ? 'Sent' : 'Failed',
+      errorMessage: result.autoReplySent ? '' : explainSmtpError(result.autoReplyError, result.autoReplyError?.smtpLastConfig),
+    });
+
+    if (!result.success) {
+      res.status(202).json({
+        message: "Your message was received, but we couldn't send the notification email right now. We'll still follow up shortly.",
+      });
+      return;
+    }
+
+    res.status(201).json({ message: "Thanks for reaching out! We've received your message and will get back to you shortly." });
+  } catch (error) {
+    console.error('Contact form submission failed:', error);
+    res.status(500).json({ message: 'Could not send your message. Please try again or use WhatsApp.' });
+  }
+});
+
+// ---- Blog routes ----
+
+app.get('/api/blog/categories', async (_req, res) => {
+  try {
+    const posts = (await blogPostsWithDefaults()).filter((post) => post.status === 'Published');
+    const categories = (await blogCategoriesWithDefaults()).map((category) => ({
+      ...category,
+      articleCount: posts.filter((post) => post.categorySlug === category.slug || post.category === category.name).length,
+    }));
+    res.json({ categories });
+  } catch (error) {
+    console.error('Blog categories read failed:', error);
+    res.status(500).json({ message: 'Could not load blog categories.' });
+  }
+});
+
+app.get('/api/blog/posts', async (req, res) => {
+  try {
+    const query = cleanText(req.query.q, 120).toLowerCase();
+    const category = cleanText(req.query.category, 120).toLowerCase();
+    const tag = cleanText(req.query.tag, 80).toLowerCase();
+    const comments = await readJsonFile('blog-comments');
+    let posts = (await blogPostsWithDefaults()).filter((post) => post.status === 'Published');
+    if (query) {
+      posts = posts.filter((post) => [
+        post.title,
+        post.subtitle,
+        post.excerpt,
+        post.category,
+        post.relatedCourse,
+        ...(post.tags || []),
+      ].join(' ').toLowerCase().includes(query));
+    }
+    if (category) posts = posts.filter((post) => post.categorySlug === category || post.category.toLowerCase() === category);
+    if (tag) posts = posts.filter((post) => (post.tags || []).some((item) => item.toLowerCase() === tag));
+    posts = posts
+      .map((post) => publicBlogPost(post, comments))
+      .sort((a, b) => new Date(b.publishedAt || b.createdAt) - new Date(a.publishedAt || a.createdAt));
+    res.json({ posts, total: posts.length });
+  } catch (error) {
+    console.error('Blog posts read failed:', error);
+    res.status(500).json({ message: 'Could not load blog posts.' });
+  }
+});
+
+app.get('/api/blog/posts/:slug', async (req, res) => {
+  try {
+    const posts = await blogPostsWithDefaults();
+    const index = posts.findIndex((post) => post.slug === req.params.slug && post.status === 'Published');
+    if (index === -1) { res.status(404).json({ message: 'Article not found.' }); return; }
+    posts[index] = { ...posts[index], views: Number(posts[index].views || 0) + 1 };
+    await writeJsonFile('blog-posts', posts);
+    const comments = await readJsonFile('blog-comments');
+    const post = publicBlogPost(posts[index], comments);
+    const related = posts
+      .filter((item) => item.id !== post.id && item.status === 'Published' && (item.categorySlug === post.categorySlug || (item.tags || []).some((tag) => (post.tags || []).includes(tag))))
+      .slice(0, 4)
+      .map((item) => publicBlogPost(item, comments));
+    res.json({
+      post,
+      related,
+      comments: comments.filter((comment) => comment.postId === post.id && comment.status === 'Approved'),
+    });
+  } catch (error) {
+    console.error('Blog post read failed:', error);
+    res.status(500).json({ message: 'Could not load article.' });
+  }
+});
+
+app.post('/api/blog/comments', testimonialLimiter, async (req, res) => {
+  try {
+    const postId = cleanText(req.body?.postId, 120);
+    const name = cleanText(req.body?.name, 100);
+    const email = cleanText(req.body?.email, 180).toLowerCase();
+    const body = cleanMultilineText(req.body?.comment || req.body?.body, 1200);
+    if (!postId || !name || !isEmail(email) || !body) {
+      res.status(400).json({ message: 'Name, valid email, article, and comment are required.' });
+      return;
+    }
+    const posts = await blogPostsWithDefaults();
+    if (!posts.some((post) => post.id === postId && post.commentsEnabled !== false)) {
+      res.status(404).json({ message: 'Article comments are not available.' });
+      return;
+    }
+    const comments = await readJsonFile('blog-comments');
+    const comment = {
+      id: createAdminId('comment'),
+      postId,
+      name,
+      email,
+      body,
+      status: 'Pending',
+      likes: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    comments.unshift(comment);
+    await writeJsonFile('blog-comments', comments);
+    res.status(201).json({ message: 'Comment submitted for approval.', comment });
+  } catch (error) {
+    console.error('Blog comment create failed:', error);
+    res.status(500).json({ message: 'Could not submit comment.' });
+  }
+});
+
+app.post('/api/blog/newsletter/subscribe', orderLimiter, async (req, res) => {
+  try {
+    const firstName = cleanText(req.body?.firstName || req.body?.name, 80);
+    const email = cleanText(req.body?.email, 180).toLowerCase();
+    if (!isEmail(email)) { res.status(400).json({ message: 'Enter a valid email address.' }); return; }
+    const subscribers = await readJsonFile('blog-subscribers');
+    const existingIndex = subscribers.findIndex((item) => item.email === email);
+    const subscriber = {
+      id: existingIndex >= 0 ? subscribers[existingIndex].id : createAdminId('sub'),
+      firstName,
+      email,
+      status: 'Active',
+      source: 'Blog',
+      tags: ['blog'],
+      createdAt: existingIndex >= 0 ? subscribers[existingIndex].createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    if (existingIndex >= 0) subscribers[existingIndex] = subscriber;
+    else subscribers.unshift(subscriber);
+    await writeJsonFile('blog-subscribers', subscribers);
+    res.status(existingIndex >= 0 ? 200 : 201).json({ message: 'Subscription saved.', subscriber });
+  } catch (error) {
+    console.error('Blog subscriber create failed:', error);
+    res.status(500).json({ message: 'Could not subscribe right now.' });
+  }
+});
+
+app.post('/api/blog/posts/:id/like', async (req, res) => {
+  try {
+    const posts = await blogPostsWithDefaults();
+    const index = posts.findIndex((post) => post.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Article not found.' }); return; }
+    posts[index] = { ...posts[index], likes: Number(posts[index].likes || 0) + 1, updatedAt: new Date().toISOString() };
+    await writeJsonFile('blog-posts', posts);
+    res.json({ likes: posts[index].likes });
+  } catch (error) {
+    console.error('Blog like failed:', error);
+    res.status(500).json({ message: 'Could not like article.' });
+  }
+});
+
+app.get('/api/admin/blog/posts', requireAdmin, async (_req, res) => {
+  try {
+    const comments = await readJsonFile('blog-comments');
+    const posts = (await blogPostsWithDefaults()).map((post) => publicBlogPost(post, comments));
+    res.json({ posts });
+  } catch (error) {
+    console.error('Admin blog posts read failed:', error);
+    res.status(500).json({ message: 'Could not load blog posts.' });
+  }
+});
+
+app.post('/api/admin/blog/posts', requireAdmin, async (req, res) => {
+  try {
+    const posts = await blogPostsWithDefaults();
+    const post = normalizeBlogPost(req.body);
+    posts.unshift(post);
+    await writeJsonFile('blog-posts', posts);
+    res.status(201).json({ post });
+  } catch (error) {
+    console.error('Admin blog post create failed:', error);
+    res.status(500).json({ message: 'Could not create blog post.' });
+  }
+});
+
+app.put('/api/admin/blog/posts/:id', requireAdmin, async (req, res) => {
+  try {
+    const posts = await blogPostsWithDefaults();
+    const index = posts.findIndex((post) => post.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Blog post not found.' }); return; }
+    posts[index] = normalizeBlogPost(req.body, posts[index]);
+    await writeJsonFile('blog-posts', posts);
+    res.json({ post: posts[index] });
+  } catch (error) {
+    console.error('Admin blog post update failed:', error);
+    res.status(500).json({ message: 'Could not update blog post.' });
+  }
+});
+
+app.delete('/api/admin/blog/posts/:id', requireAdmin, async (req, res) => {
+  try {
+    const posts = await blogPostsWithDefaults();
+    const index = posts.findIndex((post) => post.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Blog post not found.' }); return; }
+    const [post] = posts.splice(index, 1);
+    await writeJsonFile('blog-posts', posts);
+    res.json({ post });
+  } catch (error) {
+    console.error('Admin blog post delete failed:', error);
+    res.status(500).json({ message: 'Could not delete blog post.' });
+  }
+});
+
+app.patch('/api/admin/blog/posts/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const posts = await blogPostsWithDefaults();
+    const index = posts.findIndex((post) => post.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Blog post not found.' }); return; }
+    const status = cleanText(req.body?.status, 40) || posts[index].status;
+    posts[index] = {
+      ...posts[index],
+      status,
+      publishedAt: status === 'Published' && !posts[index].publishedAt ? new Date().toISOString() : posts[index].publishedAt,
+      updatedAt: new Date().toISOString(),
+    };
+    await writeJsonFile('blog-posts', posts);
+    res.json({ post: posts[index] });
+  } catch (error) {
+    console.error('Admin blog status update failed:', error);
+    res.status(500).json({ message: 'Could not update status.' });
+  }
+});
+
+app.post('/api/admin/blog/posts/:id/duplicate', requireAdmin, async (req, res) => {
+  try {
+    const posts = await blogPostsWithDefaults();
+    const original = posts.find((post) => post.id === req.params.id);
+    if (!original) { res.status(404).json({ message: 'Blog post not found.' }); return; }
+    const copy = normalizeBlogPost({ ...original, id: '', title: `${original.title} Copy`, slug: `${original.slug}-copy-${Date.now()}`, status: 'Draft', featured: false, publishedAt: '', views: 0, likes: 0, shares: 0 });
+    posts.unshift(copy);
+    await writeJsonFile('blog-posts', posts);
+    res.status(201).json({ post: copy });
+  } catch (error) {
+    console.error('Admin blog duplicate failed:', error);
+    res.status(500).json({ message: 'Could not duplicate post.' });
+  }
+});
+
+app.get('/api/admin/blog/categories', requireAdmin, async (_req, res) => {
+  try {
+    res.json({ categories: await blogCategoriesWithDefaults() });
+  } catch (error) {
+    console.error('Admin blog categories read failed:', error);
+    res.status(500).json({ message: 'Could not load categories.' });
+  }
+});
+
+app.post('/api/admin/blog/categories', requireAdmin, async (req, res) => {
+  try {
+    const categories = await blogCategoriesWithDefaults();
+    const category = normalizeBlogCategory(req.body);
+    categories.push(category);
+    await writeJsonFile('blog-categories', categories);
+    res.status(201).json({ category });
+  } catch (error) {
+    console.error('Admin blog category create failed:', error);
+    res.status(500).json({ message: 'Could not create category.' });
+  }
+});
+
+app.put('/api/admin/blog/categories/:id', requireAdmin, async (req, res) => {
+  try {
+    const categories = await blogCategoriesWithDefaults();
+    const index = categories.findIndex((category) => category.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Category not found.' }); return; }
+    categories[index] = normalizeBlogCategory(req.body, categories[index]);
+    await writeJsonFile('blog-categories', categories);
+    res.json({ category: categories[index] });
+  } catch (error) {
+    console.error('Admin blog category update failed:', error);
+    res.status(500).json({ message: 'Could not update category.' });
+  }
+});
+
+app.delete('/api/admin/blog/categories/:id', requireAdmin, async (req, res) => {
+  try {
+    const categories = await blogCategoriesWithDefaults();
+    const index = categories.findIndex((category) => category.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Category not found.' }); return; }
+    const [category] = categories.splice(index, 1);
+    await writeJsonFile('blog-categories', categories);
+    res.json({ category });
+  } catch (error) {
+    console.error('Admin blog category delete failed:', error);
+    res.status(500).json({ message: 'Could not delete category.' });
+  }
+});
+
+app.get('/api/admin/blog/comments', requireAdmin, async (_req, res) => {
+  try {
+    const posts = await blogPostsWithDefaults();
+    const titleById = new Map(posts.map((post) => [post.id, post.title]));
+    const comments = (await readJsonFile('blog-comments')).map((comment) => ({ ...comment, postTitle: titleById.get(comment.postId) || 'Unknown post' }));
+    res.json({ comments });
+  } catch (error) {
+    console.error('Admin blog comments read failed:', error);
+    res.status(500).json({ message: 'Could not load comments.' });
+  }
+});
+
+app.patch('/api/admin/blog/comments/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const comments = await readJsonFile('blog-comments');
+    const index = comments.findIndex((comment) => comment.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Comment not found.' }); return; }
+    comments[index] = { ...comments[index], status: cleanText(req.body?.status, 30) || comments[index].status, updatedAt: new Date().toISOString() };
+    await writeJsonFile('blog-comments', comments);
+    res.json({ comment: comments[index] });
+  } catch (error) {
+    console.error('Admin blog comment update failed:', error);
+    res.status(500).json({ message: 'Could not update comment.' });
+  }
+});
+
+app.delete('/api/admin/blog/comments/:id', requireAdmin, async (req, res) => {
+  try {
+    const comments = await readJsonFile('blog-comments');
+    const index = comments.findIndex((comment) => comment.id === req.params.id);
+    if (index === -1) { res.status(404).json({ message: 'Comment not found.' }); return; }
+    const [comment] = comments.splice(index, 1);
+    await writeJsonFile('blog-comments', comments);
+    res.json({ comment });
+  } catch (error) {
+    console.error('Admin blog comment delete failed:', error);
+    res.status(500).json({ message: 'Could not delete comment.' });
+  }
+});
+
+app.get('/api/admin/blog/newsletter-subscribers', requireAdmin, async (_req, res) => {
+  try {
+    res.json({ subscribers: await readJsonFile('blog-subscribers') });
+  } catch (error) {
+    console.error('Admin blog subscribers read failed:', error);
+    res.status(500).json({ message: 'Could not load subscribers.' });
+  }
+});
+
+app.get('/api/admin/blog/analytics', requireAdmin, async (_req, res) => {
+  try {
+    const posts = await blogPostsWithDefaults();
+    const comments = await readJsonFile('blog-comments');
+    const subscribers = await readJsonFile('blog-subscribers');
+    res.json({
+      analytics: {
+        totalPosts: posts.length,
+        publishedPosts: posts.filter((post) => post.status === 'Published').length,
+        draftPosts: posts.filter((post) => post.status === 'Draft').length,
+        scheduledPosts: posts.filter((post) => post.status === 'Scheduled').length,
+        totalViews: posts.reduce((sum, post) => sum + Number(post.views || 0), 0),
+        totalComments: comments.length,
+        newsletterSubscribers: subscribers.length,
+        totalAuthors: new Set(posts.map((post) => post.author?.name).filter(Boolean)).size,
+        topPosts: [...posts].sort((a, b) => Number(b.views || 0) - Number(a.views || 0)).slice(0, 5),
+      },
+    });
+  } catch (error) {
+    console.error('Admin blog analytics read failed:', error);
+    res.status(500).json({ message: 'Could not load blog analytics.' });
+  }
+});
+
 // ---- Student portal routes ----
 
 function signStudentToken(account) {
@@ -3732,6 +4241,88 @@ app.post('/api/student/auth/login', studentAuthLimiter, async (req, res) => {
   } catch (error) {
     console.error('Student login failed:', error);
     res.status(500).json({ message: 'Could not sign you in. Please try again.' });
+  }
+});
+
+const PASSWORD_RESET_EXPIRY_MINUTES = 60;
+
+app.post('/api/student/auth/forgot-password', studentAuthLimiter, async (req, res) => {
+  try {
+    const email = cleanText(req.body?.email, 120).toLowerCase();
+    if (!isEmail(email)) { res.status(400).json({ message: 'A valid email address is required.' }); return; }
+
+    const accounts = await readJsonFile('student-accounts');
+    const account = accounts.find((item) => item.email === email);
+
+    // Always respond with the same generic message, whether or not the account exists,
+    // so this endpoint can't be used to discover which emails are registered.
+    const genericMessage = 'If an account with that email exists, a password reset link has been sent.';
+
+    if (account) {
+      const token = generateSecureToken();
+      const resets = await readJsonFile('password-resets');
+      const filtered = resets.filter((item) => item.accountId !== account.id);
+      filtered.push({
+        token,
+        accountId: account.id,
+        email: account.email,
+        expiresAt: new Date(Date.now() + PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000).toISOString(),
+        createdAt: new Date().toISOString(),
+      });
+      await writeJsonFile('password-resets', filtered);
+
+      const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim();
+      const resetUrl = `${clientUrl}/student/reset-password?token=${token}`;
+
+      const result = await sendPasswordReset({
+        to: account.email,
+        name: account.name,
+        resetUrl,
+        expiresInMinutes: PASSWORD_RESET_EXPIRY_MINUTES,
+      });
+
+      await recordEmailDelivery({
+        id: `password-reset-${account.id}-${Date.now()}`,
+        recipient: account.email,
+        subject: '🔒 Reset Your HIKLASS Academy Password',
+        status: result.success ? 'Sent' : 'Failed',
+        errorMessage: result.success ? '' : explainSmtpError(result.error, result.error?.smtpLastConfig),
+      });
+    }
+
+    res.json({ message: genericMessage });
+  } catch (error) {
+    console.error('Student forgot-password failed:', error);
+    res.status(500).json({ message: 'Could not process your request. Please try again.' });
+  }
+});
+
+app.post('/api/student/auth/reset-password', studentAuthLimiter, async (req, res) => {
+  try {
+    const token = String(req.body?.token || '').trim();
+    const password = String(req.body?.password || '');
+    if (!token) { res.status(400).json({ message: 'Missing reset token.' }); return; }
+    if (password.length < 6) { res.status(400).json({ message: 'Password must be at least 6 characters.' }); return; }
+
+    const resets = await readJsonFile('password-resets');
+    const entry = resets.find((item) => item.token === token);
+    if (!entry || new Date(entry.expiresAt).getTime() < Date.now()) {
+      res.status(400).json({ message: 'This reset link is invalid or has expired. Please request a new one.' });
+      return;
+    }
+
+    const accounts = await readJsonFile('student-accounts');
+    const index = accounts.findIndex((item) => item.id === entry.accountId);
+    if (index === -1) { res.status(404).json({ message: 'Account not found.' }); return; }
+
+    accounts[index] = { ...accounts[index], passwordHash: await bcrypt.hash(password, 10) };
+    await writeJsonFile('student-accounts', accounts);
+    await writeJsonFile('password-resets', resets.filter((item) => item.token !== token));
+
+    res.json({ message: 'Your password has been reset. You can now sign in with your new password.' });
+  } catch (error) {
+    console.error('Student reset-password failed:', error);
+    res.status(500).json({ message: 'Could not reset your password. Please try again.' });
   }
 });
 
@@ -5415,7 +6006,17 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ message: 'Internal server error.' });
 });
 
-function startServer(port = PORT, options = {}) {
+async function startServer(port = PORT, options = {}) {
+  await migrateLegacyDataFiles();
+  await refreshCoursePriceCache();
+
+  try {
+    const storedSettings = await readJsonFile('settings');
+    setSmtpOverride(storedSettings[0] || null);
+  } catch (error) {
+    console.error('Could not load stored settings for SMTP override:', error);
+  }
+
   const numericPort = Number(port);
   const maxRetries = Number(options.maxRetries ?? (process.env.NODE_ENV !== 'production' ? 10 : 0));
   let attempts = 0;
@@ -5423,6 +6024,9 @@ function startServer(port = PORT, options = {}) {
   function listen(nextPort) {
     const server = app.listen(nextPort, () => {
       console.log(`Server running on http://localhost:${nextPort}`);
+      verifySmtpOnStartup().catch((error) => {
+        console.error('Unexpected error while verifying SMTP on startup (server kept running):', error);
+      });
     });
 
     server.on('error', (error) => {

@@ -54,7 +54,7 @@
 .studentCardHead button {
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--hk-primary);
+  color: #0149CA;
   text-decoration: none;
   background: none;
   border: none;
@@ -72,7 +72,7 @@
 }
 
 .studentEmptyState svg {
-  color: var(--hk-primary);
+  color: #0149CA;
   opacity: 0.5;
 }
 
@@ -135,7 +135,7 @@
   height: 44px;
   border-radius: 12px;
   background: #EEF1FD;
-  color: var(--hk-primary);
+  color: #0149CA;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -193,7 +193,7 @@
   height: 64px;
   border-radius: 50%;
   background: #EEF1FD;
-  color: var(--hk-primary);
+  color: #0149CA;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -311,7 +311,7 @@
   height: 84px;
   border-radius: 50%;
   background: var(--hk-bg);
-  color: var(--hk-primary);
+  color: #0149CA;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -374,7 +374,7 @@
   height: 38px;
   border-radius: 10px;
   background: #EEF1FD;
-  color: var(--hk-primary);
+  color: #0149CA;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -472,7 +472,7 @@
 .studentCourseCategory {
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--hk-primary);
+  color: #0149CA;
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
@@ -557,7 +557,7 @@
   gap: 6px;
   background: #EEF1FD;
   border: 1px solid #D6DEFA;
-  color: var(--hk-primary);
+  color: #0149CA;
   text-decoration: none;
   font-size: 0.82rem;
   font-weight: 700;

@@ -1,0 +1,312 @@
+.adminBlogManager {
+  display: grid;
+  gap: 18px;
+}
+
+.adminBlogHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.adminBlogHead h1 {
+  margin: 0;
+  color: #0D2957;
+}
+
+.adminBlogHead p {
+  margin: 6px 0 0;
+  color: #6B7280;
+}
+
+.adminBlogHead a,
+.adminBlogToolbar button,
+.adminBlogEditorActions button,
+.adminBlogCategoryForm button {
+  border: none;
+  background: #1E2F97;
+  color: #fff;
+  border-radius: 8px;
+  padding: 9px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.adminBlogTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid #E5E7EB;
+  padding-bottom: 10px;
+}
+
+.adminBlogTabs button {
+  border: 1px solid #E5E7EB;
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 13px;
+  color: #374151;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.adminBlogTabs button.active {
+  background: #1E2F97;
+  border-color: #1E2F97;
+  color: #fff;
+}
+
+.adminBlogStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.adminBlogStat,
+.adminBlogPanel {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.adminBlogStat {
+  display: grid;
+  gap: 8px;
+}
+
+.adminBlogStat svg { color: #0149CA; }
+.adminBlogStat span { color: #6B7280; font-size: 0.82rem; }
+.adminBlogStat strong { color: #0D2957; font-size: 1.7rem; }
+.adminBlogWide { grid-column: 1 / -1; }
+.adminBlogWide p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #F3F4F6;
+  padding-bottom: 8px;
+}
+
+.adminBlogToolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.adminBlogToolbar div {
+  min-width: 260px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 0 10px;
+}
+
+.adminBlogToolbar input {
+  width: 100%;
+  border: none;
+  padding: 10px 0;
+  font: inherit;
+  outline: none;
+}
+
+.adminBlogTableWrap { overflow-x: auto; }
+.adminBlogTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.adminBlogTable th {
+  text-align: left;
+  color: #6B7280;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid #E5E7EB;
+  padding: 10px;
+}
+.adminBlogTable td {
+  border-bottom: 1px solid #F3F4F6;
+  padding: 10px;
+  vertical-align: top;
+}
+.adminBlogTable small {
+  display: block;
+  color: #9CA3AF;
+  margin-top: 3px;
+}
+
+.adminBlogStatus {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #EEF1FD;
+  color: #0149CA;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+.adminBlogStatus.published { background: #DCFCE7; color: #166534; }
+.adminBlogStatus.archived,
+.adminBlogStatus.unpublished { background: #F3F4F6; color: #374151; }
+.adminBlogStatus.pending-review,
+.adminBlogStatus.scheduled { background: #FEF3C7; color: #92400E; }
+
+.adminBlogActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 230px;
+}
+.adminBlogActions a,
+.adminBlogActions button {
+  border: none;
+  background: #EEF1FD;
+  color: #0149CA;
+  border-radius: 7px;
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.adminBlogActions button.danger { background: #FEE2E2; color: #B91C1C; }
+.adminBlogActions select {
+  border: 1px solid #E5E7EB;
+  border-radius: 7px;
+  padding: 4px 6px;
+  font-size: 0.78rem;
+}
+
+.adminBlogEditor {
+  display: grid;
+  gap: 16px;
+}
+.adminBlogPanel h2 { margin: 0 0 14px; color: #0149CA; font-size: 1.05rem; }
+.adminBlogFormGrid,
+.adminBlogCategoryForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.adminBlogFormGrid label,
+.adminBlogEditor > .adminBlogPanel > label {
+  display: grid;
+  gap: 5px;
+  color: #374151;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.adminBlogFormGrid input,
+.adminBlogFormGrid textarea,
+.adminBlogFormGrid select,
+.adminBlogCategoryForm input,
+.adminBlogCategoryForm textarea,
+.adminBlogEditor > .adminBlogPanel > label textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font: inherit;
+  font-weight: 400;
+}
+.adminBlogFormGrid textarea,
+.adminBlogCategoryForm textarea {
+  min-height: 80px;
+}
+.adminBlogContentInput {
+  min-height: 320px;
+  font-family: Consolas, 'SFMono-Regular', monospace;
+  line-height: 1.55;
+}
+.adminBlogFormGrid label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.adminBlogEditorActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.adminBlogEditorActions button + button {
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.adminBlogCategoryList {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.adminBlogCategoryList div,
+.adminBlogComment {
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 12px;
+}
+.adminBlogCategoryList div {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+}
+.adminBlogCategoryList span,
+.adminBlogComment span { color: #6B7280; font-size: 0.8rem; }
+.adminBlogCategoryList button,
+.adminBlogComment button {
+  border: none;
+  background: #EEF1FD;
+  color: #0149CA;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.adminBlogComment {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.adminBlogComment p { margin: 0; color: #374151; }
+.adminBlogComment div { display: flex; gap: 8px; }
+
+.adminBlogSettingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.adminBlogSettingsGrid span {
+  border: 1px solid #E5E7EB;
+  border-radius: 9px;
+  padding: 12px;
+  color: #374151;
+  background: #F9FAFB;
+}
+
+@media (max-width: 900px) {
+  .adminBlogStatsGrid,
+  .adminBlogFormGrid,
+  .adminBlogCategoryForm,
+  .adminBlogSettingsGrid {
+    grid-template-columns: 1fr;
+  }
+  .adminBlogToolbar,
+  .adminBlogHead {
+    flex-direction: column;
+  }
+  .adminBlogToolbar div {
+    min-width: 0;
+    width: 100%;
+  }
+  .adminBlogCategoryList div {
+    grid-template-columns: 1fr;
+  }
+}

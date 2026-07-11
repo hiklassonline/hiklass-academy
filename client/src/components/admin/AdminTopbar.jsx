@@ -8,7 +8,7 @@ import API_URL from '../../utils/apiBaseUrl';
 import AdminAvatar from './AdminAvatar.jsx';
 
 const notifTypeIcons = { enrollment: Mail, payment: CreditCard, message: MessageSquare, error: AlertCircle, info: Info };
-const notifTypeColors = { enrollment: '#1E2F97', payment: '#059669', message: '#2554A5', error: '#D30D1A', info: '#6B7280' };
+const notifTypeColors = { enrollment: '#0149CA', payment: '#059669', message: '#2554A5', error: '#D30D1A', info: '#6B7280' };
 
 function formatRelativeTime(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -252,7 +252,7 @@ export default function AdminTopbar({ currentPage, query: searchQuery, setQuery:
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px 10px', borderBottom: '1px solid #F3F4F6' }}>
                   <strong style={{ fontSize: 15, color: '#111827' }}>Notifications</strong>
-                  <button type="button" onClick={markAllAsRead} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#1E2F97', fontWeight: 600 }}>
+                  <button type="button" onClick={markAllAsRead} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#0149CA', fontWeight: 600 }}>
                     Mark all as read
                   </button>
                 </div>

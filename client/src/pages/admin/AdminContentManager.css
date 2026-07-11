@@ -9,7 +9,7 @@
 .adminContentBack {
   display: inline-block;
   margin-bottom: 14px;
-  color: #1E2F97;
+  color: #0149CA;
   font-weight: 600;
   font-size: 0.88rem;
   text-decoration: none;
@@ -55,7 +55,7 @@
   gap: 8px;
   margin: 0 0 14px;
   font-size: 1.05rem;
-  color: #1E2F97;
+  color: #0149CA;
 }
 
 .adminContentForm {
@@ -152,7 +152,7 @@
 .adminContentListActions button {
   border: none;
   background: #EEF1FD;
-  color: #1E2F97;
+  color: #0149CA;
   border-radius: 8px;
   width: 30px;
   height: 30px;
@@ -221,7 +221,7 @@
   font-weight: 700;
 }
 
-.adminAccountBadge.password { background: #EEF1FD; color: #1E2F97; }
+.adminAccountBadge.password { background: #EEF1FD; color: #0149CA; }
 .adminAccountBadge.google { background: #FEF3C7; color: #92400E; }
 
 .adminAccountActions {
@@ -232,7 +232,7 @@
 .adminAccountActions button {
   border: none;
   background: #EEF1FD;
-  color: #1E2F97;
+  color: #0149CA;
   border-radius: 8px;
   width: 30px;
   height: 30px;
@@ -412,7 +412,7 @@
 .adminFormSectionTitle {
   margin: 4px 0 0;
   font-size: 0.92rem;
-  color: #1E2F97;
+  color: #0149CA;
 }
 
 .adminModuleEditor {
@@ -476,7 +476,7 @@
   justify-self: start;
   border: 1px dashed #C7D2FE;
   background: #EEF1FD;
-  color: #1E2F97;
+  color: #0149CA;
   border-radius: 8px;
   padding: 7px 12px;
   font-size: 0.8rem;

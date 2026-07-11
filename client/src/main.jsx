@@ -27,6 +27,7 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  ClipboardCheck,
   Clock3,
   CreditCard,
   Download,
@@ -40,8 +41,6 @@ import {
   LifeBuoy,
   LockKeyhole,
   Mail,
-  MapPin,
-  Menu,
   MessageSquare,
   Package,
   Phone,
@@ -55,12 +54,14 @@ import {
   Star,
   UserRound,
   Users,
+  Video,
   WalletCards,
   X,
 } from 'lucide-react';
 import { brandAssets, uiAssets } from './assets/index.js';
 import { categories, courses } from './data/courses.js';
 import { packages } from './data/packages.js';
+import { defaultTestimonials } from './data/testimonials.js';
 import Modal from './components/admin/Modal.jsx';
 import ConfirmDialog from './components/admin/ConfirmDialog.jsx';
 import Toast from './components/admin/Toast.jsx';
@@ -69,10 +70,17 @@ import ProfilePage from './components/admin/ProfilePage.jsx';
 import PaymentDetailsPanel from './components/PaymentDetailsPanel.jsx';
 import PaymentMethodSelector from './components/PaymentMethodSelector.jsx';
 import SmartsuppChat from './components/SmartsuppChat.jsx';
+import SiteHeader from './components/SiteHeader.jsx';
+import SiteFooter from './components/SiteFooter.jsx';
 import AdminLogin from './pages/admin/AdminLogin.jsx';
 import AdminContentManager from './pages/admin/AdminContentManager.jsx';
+import AdminBlogManager from './pages/admin/AdminBlogManager.jsx';
+import BlogPage from './pages/BlogPage.jsx';
+import AboutPage from './pages/AboutPage.jsx';
+import ContactPage from './pages/ContactPage.jsx';
 import StudentLogin from './pages/student/StudentLogin.jsx';
 import StudentRegister from './pages/student/StudentRegister.jsx';
+import StudentResetPassword from './pages/student/StudentResetPassword.jsx';
 import StudentPortal from './pages/student/StudentPortal.jsx';
 import { paymentMethodOptions } from './data/paymentMethods.js';
 import { submitEnrollment, fetchTestimonials, submitTestimonial } from './services/api.js';
@@ -99,24 +107,6 @@ const PAYMENT_METHODS = paymentMethodOptions;
 function formatPrice(value) {
   return `${Number(value || 0).toLocaleString('en-US')} FCFA`;
 }
-
-const defaultTestimonials = [
-  {
-    name: 'Mireille A.',
-    role: 'Holiday student',
-    quote: 'The training was practical from day one. I left with real design work and better confidence.',
-  },
-  {
-    name: 'Jason T.',
-    role: 'Web development learner',
-    quote: 'HIKLASS made coding clear. The project approach helped me understand how websites are really built.',
-  },
-  {
-    name: 'Parent feedback',
-    role: 'Coding for Kids',
-    quote: 'The instructors were patient, organized, and very good at keeping young learners engaged.',
-  },
-];
 
 const faqs = [
   ['Who can enroll at HIKLASS Academy?', 'Anyone with a passion for learning can enroll. Our programs are designed for beginners, students, professionals, entrepreneurs, and anyone looking to acquire or improve digital skills.'],
@@ -340,6 +330,7 @@ const adminPages = [
   { id: 'enrollments', label: 'Enrollments', icon: Inbox },
   { id: 'courses', label: 'Courses', icon: BookOpen },
   { id: 'packages', label: 'Packages', icon: Package },
+  { id: 'blog', label: 'Blog', icon: BookOpenCheck },
   { id: 'students', label: 'Students', icon: Users },
   { id: 'payments', label: 'Payments', icon: CreditCard },
   { id: 'discounts', label: 'Discounts', icon: Gift },
@@ -508,57 +499,6 @@ function topPackageRows(stats) {
 
 function courseCatalogRows() {
   return courses.map((course) => ({ ...course, status: 'Active' }));
-}
-
-function Header() {
-  const [open, setOpen] = useState(false);
-  const isStudentLoggedIn = Boolean(getStoredStudentToken());
-  const links = [
-    ['Courses', '#courses'],
-    ['Why HIKLASS', '#why'],
-    ['Packages', '#packages'],
-    ['FAQ', '#faq'],
-    ['Contact', '#contact'],
-  ];
-
-  return (
-    <header className="siteHeader">
-      <a className="brand brandFull" href="#home" aria-label="HIKLASS Academy home">
-        <img src={brandAssets.logoHorizontal} alt="HIKLASS Academy" />
-      </a>
-
-      <nav className={open ? 'nav navOpen' : 'nav'} aria-label="Main navigation">
-        {links.map(([label, href]) => (
-          <a key={href} href={href} onClick={() => setOpen(false)}>
-            {label}
-          </a>
-        ))}
-        {isStudentLoggedIn ? (
-          <a href="/student/dashboard" onClick={() => setOpen(false)}>
-            Dashboard
-          </a>
-        ) : (
-          <>
-            <a href="/student/login" onClick={() => setOpen(false)}>
-              Login
-            </a>
-            <a href="/student/register" onClick={() => setOpen(false)}>
-              Sign Up
-            </a>
-          </>
-        )}
-      </nav>
-
-      <a className="enroll-btn" href="#enroll">
-        Enroll Now
-        <ArrowRight size={17} />
-      </a>
-
-      <button className="menuButton" type="button" onClick={() => setOpen((value) => !value)} aria-label="Toggle menu">
-        {open ? <X size={24} /> : <Menu size={24} />}
-      </button>
-    </header>
-  );
 }
 
 function Hero() {
@@ -769,16 +709,25 @@ function CoursesSection({ selectedCourses, onToggle }) {
   );
 }
 
-function WhyChoose() {
-  const reasons = [
-    ['Expert guidance', 'Learn with patient instructors who connect concepts to real work.', Users],
-    ['Project learning', 'Build class projects that prove what you can do.', BookOpenCheck],
-    ['Flexible modes', 'Choose online, physical, or hybrid classes that fit your schedule.', Clock3],
-    ['Certificate support', 'Finish with proof of participation and a clearer learning path.', Award],
-    ['Secure handling', 'Orders are validated, stored server-side, and never expose SMTP secrets.', ShieldCheck],
-    ['Fast follow-up', 'Email confirmation and WhatsApp fallback keep registration moving.', Phone],
-  ];
+const WHY_CHOOSE_REASONS = [
+  ['Student dashboard', 'See every enrolled course, order, and payment in one dashboard with a live progress ring.', LayoutDashboard],
+  ['Curriculum tracking', 'Move through modules and lessons with clear completed, in-progress, and locked states.', BookOpenCheck],
+  ['Quizzes & assignments', 'Submit assignments and take auto-graded quizzes with instant scores and feedback.', ClipboardCheck],
+  ['Live chat & video calls', 'Message your instructors, send voice notes, or start a one-click video call for support.', Video],
+  ['Certificates', 'Earn a certificate of completion as proof of participation when you finish a course.', Award],
+  ['Secure orders & payments', 'Every order and payment is validated and stored securely, with full history in your portal.', ShieldCheck],
+];
 
+const TRAINING_APPROACH_STEPS = [
+  { step: 1, tone: 'blue', label: 'Learn the Fundamentals' },
+  { step: 2, tone: 'red', label: 'Hands-on Practice' },
+  { step: 3, tone: 'brown', label: 'Real-World Projects' },
+  { step: 4, tone: 'dark', label: 'Portfolio Development' },
+  { step: 5, tone: 'orange', label: 'Certification' },
+  { step: 6, tone: 'green', label: 'Career Growth' },
+];
+
+function WhyChoose() {
   return (
     <section id="why" className="section whySection">
       <div className="sectionIntro">
@@ -786,13 +735,24 @@ function WhyChoose() {
         <h2>Training built for confidence, not confusion.</h2>
       </div>
       <div className="whyGrid">
-        {reasons.map(([title, description, Icon]) => (
+        {WHY_CHOOSE_REASONS.map(([title, description, Icon]) => (
           <article key={title} className="whyCard">
             <Icon size={24} />
             <h3>{title}</h3>
             <p>{description}</p>
           </article>
         ))}
+      </div>
+      <div className="whyApproachStrip">
+        <strong>Our Training Approach</strong>
+        <div className="whyApproachSteps">
+          {TRAINING_APPROACH_STEPS.map((item) => (
+            <div className="whyApproachStep" key={item.step}>
+              <span className={`aboutStepCircle tone${item.tone[0].toUpperCase()}${item.tone.slice(1)}`}>{item.step}</span>
+              {item.label}
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -964,7 +924,7 @@ function InstructorProfilePage({ instructorId }) {
 
   return (
     <>
-      <Header />
+      <SiteHeader />
       <main>
         <section className="section instructorProfileSection">
           <a className="instructorBackLink" href="/#instructors">&larr; Back to Instructors</a>
@@ -1045,6 +1005,7 @@ function InstructorProfilePage({ instructorId }) {
           ) : null}
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }
@@ -1481,36 +1442,6 @@ function FAQ() {
             <p>{answer}</p>
           </details>
         ))}
-      </div>
-    </section>
-  );
-}
-
-function Contact() {
-  return (
-    <section id="contact" className="contactSection">
-      <div>
-        <img src={brandAssets.logo} alt="HIKLASS logo" />
-        <h2>Ready to start?</h2>
-        <p>Contact HIKLASS Academy for holiday course enrollment, class schedules, and package guidance.</p>
-      </div>
-      <div className="contactMethods">
-        <a href="mailto:info@hiklassacademy.com">
-          <Mail size={20} />
-          info@hiklassacademy.com
-        </a>
-        <a href="tel:+237651251941">
-          <Phone size={20} />
-          +237 651 251 941
-        </a>
-        <a href="https://wa.me/237651251941" target="_blank" rel="noreferrer">
-          <WhatsAppBrandIcon size={20} />
-          +237 651 251 941
-        </a>
-        <span>
-          <MapPin size={20} />
-          Online, physical, and hybrid learning
-        </span>
       </div>
     </section>
   );
@@ -2090,6 +2021,10 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
       );
     }
 
+    if (activePage === 'blog') {
+      return <AdminBlogManager />;
+    }
+
     if (activePage === 'students') {
       return <StudentsPage data={students} onAdd={() => setModal({ open: true, mode: 'add', page: 'students', data: null })} onEdit={(item) => setModal({ open: true, mode: 'edit', page: 'students', data: item })} onDelete={(id) => setConfirm({ open: true, id, label: 'student', type: 'students' })} />;
     }
@@ -2206,6 +2141,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
           <span>Quick Actions</span>
           <button type="button" className="red" onClick={() => { openPage('courses'); setModal({ open: true, mode: 'add', page: 'courses', data: null }); }}><PlusCircle size={17} /> Add Course</button>
           <button type="button" className="blue" onClick={() => { openPage('packages'); setModal({ open: true, mode: 'add', page: 'packages', data: null }); }}><Box size={17} /> Add Package</button>
+          <button type="button" className="blue" onClick={() => openPage('blog')}><BookOpenCheck size={17} /> Blog Manager</button>
           <button type="button" className="green" onClick={() => window.location.href = 'mailto:info@hiklassacademy.com'}><Mail size={17} /> Send Email</button>
           <button type="button" className="blue" onClick={() => { window.location.href = '/admin/content'; }}><LayoutDashboard size={17} /> Student Portal</button>
         </div>
@@ -3138,7 +3074,12 @@ function App() {
   const isAdminDashboardRoute = adminPath === '/admin' || adminPath.startsWith('/admin/');
   const isStudentLoginRoute = adminPath === '/student/login';
   const isStudentRegisterRoute = adminPath === '/student/register';
-  const isStudentPortalRoute = adminPath.startsWith('/student') && !isStudentLoginRoute && !isStudentRegisterRoute;
+  const isStudentForgotPasswordRoute = adminPath === '/student/forgot-password' || adminPath === '/student/reset-password';
+  const isStudentPortalRoute = adminPath.startsWith('/student') && !isStudentLoginRoute && !isStudentRegisterRoute && !isStudentForgotPasswordRoute;
+  const blogArticleMatch = adminPath.match(/^\/blog\/(.+)$/);
+  const isBlogRoute = adminPath === '/blog' || Boolean(blogArticleMatch);
+  const isAboutRoute = adminPath === '/about';
+  const isContactRoute = adminPath === '/contact';
   const instructorProfileMatch = adminPath.match(/^\/instructor\/(.+)$/);
   const selectedCount = selectedCourses.length + selectedPackages.length;
 
@@ -3206,6 +3147,10 @@ function App() {
     return <StudentRegister />;
   }
 
+  if (isStudentForgotPasswordRoute) {
+    return <StudentResetPassword />;
+  }
+
   if (isStudentPortalRoute) {
     if (!getStoredStudentToken()) {
       window.history.replaceState(null, '', '/student/login');
@@ -3218,13 +3163,40 @@ function App() {
     return <StudentPortal path={adminPath} />;
   }
 
+  if (isBlogRoute) {
+    return (
+      <>
+        <BlogPage slug={blogArticleMatch ? decodeURIComponent(blogArticleMatch[1]) : ''} />
+        <SmartsuppChat enabled />
+      </>
+    );
+  }
+
+  if (isAboutRoute) {
+    return (
+      <>
+        <AboutPage />
+        <SmartsuppChat enabled />
+      </>
+    );
+  }
+
+  if (isContactRoute) {
+    return (
+      <>
+        <ContactPage />
+        <SmartsuppChat enabled />
+      </>
+    );
+  }
+
   if (instructorProfileMatch) {
     return <InstructorProfilePage instructorId={decodeURIComponent(instructorProfileMatch[1])} />;
   }
 
   return (
     <>
-      <Header />
+      <SiteHeader />
       <main>
         <Hero />
         <CategorySection />
@@ -3240,8 +3212,8 @@ function App() {
         />
         <Testimonials />
         <FAQ />
-        <Contact />
       </main>
+      <SiteFooter />
       <FloatingEnrollButton selectedCount={selectedCount} pulse={!hasSeenFloatingEnroll} />
       <SmartsuppChat enabled={!isAdminRoute && !isStudentRoute} />
     </>

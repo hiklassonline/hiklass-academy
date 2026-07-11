@@ -90,7 +90,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <article className="adminPanel adminFullPanel" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
-        <Loader2 size={32} className="spin" color="#1E2F97" />
+        <Loader2 size={32} className="spin" color="#0149CA" />
       </article>
     );
   }

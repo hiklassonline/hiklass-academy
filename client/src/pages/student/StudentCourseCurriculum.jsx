@@ -125,7 +125,7 @@ function CircularProgress({ percent }) {
         strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
       />
-      <text x="50%" y="47%" textAnchor="middle" fontSize="22" fontWeight="700" fill="#1E2F97">{percent}%</text>
+      <text x="50%" y="47%" textAnchor="middle" fontSize="22" fontWeight="700" fill="#0149CA">{percent}%</text>
       <text x="50%" y="63%" textAnchor="middle" fontSize="10" fill="#6B7280">Overall Progress</text>
     </svg>
   );

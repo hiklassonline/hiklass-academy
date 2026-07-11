@@ -12,7 +12,7 @@
   --panel: rgba(255, 255, 255, 0.78);
   --panel-strong: rgba(255, 255, 255, 0.92);
   --text: #2B2B2B;
-  --heading: #1E2F97;
+  --heading: #0149CA;
   --secondary-text: #5F5F5F;
   --muted: #8A8687;
   --line: rgba(198, 198, 198, 0.58);
@@ -60,7 +60,7 @@
 .adminDashboardShell {
   --admin-bg: #F5F7FB;
   --admin-card: #FFFFFF;
-  --admin-navy: #07162F;
+  --admin-navy: #0D2957;
   --admin-text: #111827;
   --admin-muted: #6B7280;
   --admin-border: #E5E7EB;
@@ -95,7 +95,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   background-color: var(--admin-navy);
-  background-image: linear-gradient(180deg, #081832 0%, var(--admin-navy) 100%);
+  background-image: linear-gradient(180deg, #0E2B5A 0%, var(--admin-navy) 100%);
   color: #FFFFFF;
   z-index: 30;
   scrollbar-width: thin;
@@ -369,7 +369,7 @@
   background: #FFFFFF;
   border: 1px solid var(--admin-border);
   border-radius: 8px;
-  color: #1E2F97;
+  color: #0149CA;
   font-weight: 700;
 }
 
@@ -556,7 +556,7 @@
   border-radius: 50%;
   border: 1px dashed var(--line);
   background: rgba(30, 47, 151, 0.06);
-  color: var(--primary-blue);
+  color: #0149CA;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -615,7 +615,7 @@
 }
 
 .statusBadge.pending { background: #FEF3C7; color: #D97706; }
-.statusBadge.confirmed { background: #DBEAFE; color: #1E2F97; }
+.statusBadge.confirmed { background: #DBEAFE; color: #0149CA; }
 .statusBadge.paid { background: #DCFCE7; color: #1B5E20; }
 .statusBadge.completed { background: #CCFBF1; color: #0F766E; }
 .statusBadge.cancelled { background: #FEE2E2; color: #D30D1A; }
@@ -640,7 +640,7 @@
   background: #EEF6FF;
   border: 0;
   border-radius: 8px;
-  color: #1E2F97;
+  color: #0149CA;
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 700;
@@ -971,7 +971,7 @@
   padding: 0 12px;
   background: #EEF6FF;
   border-radius: 8px;
-  color: #1E2F97;
+  color: #0149CA;
   font-weight: 700;
 }
 
@@ -1160,87 +1160,6 @@ textarea {
   letter-spacing: 0;
 }
 
-.siteHeader {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 14px 6vw;
-  background: rgba(255, 255, 255, 0.74);
-  border-bottom: 1px solid var(--line);
-  box-shadow: 0 10px 34px rgba(30, 47, 151, 0.08);
-  backdrop-filter: blur(22px);
-}
-
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--primary-blue);
-  font-family: Poppins, ui-sans-serif, system-ui, sans-serif;
-  font-weight: 600;
-  letter-spacing: 0;
-}
-
-.brand img,
-.contactSection img {
-  width: 48px;
-  height: 48px;
-  filter: drop-shadow(0 10px 20px rgba(30, 47, 151, 0.16));
-}
-
-.brandFull img {
-  width: clamp(176px, 19vw, 260px);
-  height: auto;
-}
-
-.brand small {
-  display: block;
-  margin-top: 2px;
-  color: var(--light-gray);
-  font-size: 0.9rem;
-  font-weight: 400;
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  color: var(--primary-blue);
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.nav a {
-  position: relative;
-  padding: 8px 0;
-}
-
-.nav a::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  content: "";
-  background: var(--bright-red);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 180ms ease;
-}
-
-.nav a:hover,
-.contactMethods a:hover {
-  color: var(--royal-blue);
-}
-
-.nav a:hover::after {
-  transform: scaleX(1);
-}
-
 .button {
   display: inline-flex;
   align-items: center;
@@ -1274,42 +1193,10 @@ textarea {
   box-shadow: 0 18px 44px rgba(160, 0, 0, 0.32);
 }
 
-.enroll-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  min-height: 46px;
-  padding: 14px 32px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  background: var(--bright-red);
-  color: var(--white);
-  box-shadow: 0 10px 25px rgba(211, 13, 26, 0.25);
-  transition: all 0.3s ease;
-}
-
-.enroll-btn:hover {
-  background: #A00000;
-  transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(160, 0, 0, 0.35);
-}
-
-.enroll-btn:active {
-  background: #7A0000;
-}
-
-.enroll-btn:focus {
-  outline: 3px solid rgba(211, 13, 26, 0.3);
-  outline-offset: 2px;
-}
-
 .button.secondary {
   background: rgba(255, 255, 255, 0.78);
   border-color: var(--line);
-  color: var(--primary-blue);
+  color: #0149CA;
   box-shadow: 0 12px 28px rgba(30, 47, 151, 0.08);
   backdrop-filter: blur(14px);
 }
@@ -1372,17 +1259,6 @@ textarea {
 
 .button:hover {
   transform: translateY(-2px);
-}
-
-.menuButton {
-  display: none;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  color: var(--primary-blue);
 }
 
 .hero {
@@ -1527,8 +1403,7 @@ textarea {
 
 .sectionIntro h2,
 .sectionHead h2,
-.enrollCopy h2,
-.contactSection h2 {
+.enrollCopy h2 {
   margin: 0;
   color: var(--heading);
   font-size: clamp(2rem, 4vw, 3.2rem);
@@ -1554,7 +1429,7 @@ textarea {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--line);
   border-radius: 8px;
-  color: var(--primary-blue);
+  color: #0149CA;
   box-shadow: 0 12px 28px rgba(30, 47, 151, 0.08);
   backdrop-filter: blur(16px);
 }
@@ -1640,7 +1515,7 @@ textarea {
 .packageDurationOnPhoto {
   background: rgba(255, 255, 255, 0.92);
   border-color: transparent;
-  color: var(--primary-blue);
+  color: #0149CA;
 }
 
 .packageBody {
@@ -1690,8 +1565,7 @@ textarea {
 .packageCard p,
 .testimonialCard p,
 .enrollCopy p,
-.faqList p,
-.contactSection p {
+.faqList p {
   color: var(--secondary-text);
   font-size: 1rem;
   font-weight: 400;
@@ -1853,7 +1727,7 @@ textarea {
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: 8px;
-  color: var(--primary-blue);
+  color: #0149CA;
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 600;
@@ -1921,6 +1795,41 @@ textarea {
 
 .whyGrid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.whyApproachStrip {
+  margin-top: 34px;
+  padding-top: 30px;
+  border-top: 1px solid var(--line);
+}
+
+.whyApproachStrip > strong {
+  display: block;
+  margin-bottom: 18px;
+  color: var(--heading);
+  font-size: 1.1rem;
+}
+
+.whyApproachSteps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 26px;
+}
+
+.whyApproachStep {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 680px) {
+  .whyApproachSteps {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .enrollSection {
@@ -2069,7 +1978,7 @@ textarea {
 
 .discountBox p.success,
 .discountBox p.info {
-  color: var(--primary-blue);
+  color: #0149CA;
 }
 
 .discountBox p.error {
@@ -2467,12 +2376,12 @@ textarea {
 .formStatus.success,
 .adminStatus.success {
   background: rgba(30, 47, 151, 0.1);
-  color: var(--primary-blue);
+  color: #0149CA;
 }
 
 .formStatus.warning {
   background: rgba(198, 198, 198, 0.24);
-  color: var(--primary-blue);
+  color: #0149CA;
 }
 
 .formStatus.error,
@@ -2506,7 +2415,7 @@ textarea {
   background: rgba(30, 47, 151, 0.1);
   border: 1px solid rgba(30, 47, 151, 0.18);
   border-radius: 8px;
-  color: var(--primary-blue);
+  color: #0149CA;
   font-size: 0.9rem;
   font-weight: 500;
   text-transform: uppercase;
@@ -2543,7 +2452,7 @@ textarea {
 .packageDuration {
   background: rgba(30, 47, 151, 0.08);
   border: 1px solid rgba(30, 47, 151, 0.14);
-  color: var(--primary-blue);
+  color: #0149CA;
 }
 
 .selectedBadge {
@@ -2652,7 +2561,7 @@ textarea {
   height: 72px;
   border-radius: 999px;
   background: rgba(30, 47, 151, 0.1);
-  color: var(--primary-blue);
+  color: #0149CA;
   margin-bottom: 14px;
   overflow: hidden;
 }
@@ -2706,7 +2615,7 @@ textarea {
   align-items: center;
   gap: 6px;
   margin-top: 14px;
-  color: var(--primary-blue);
+  color: #0149CA;
   font-weight: 700;
   font-size: 0.85rem;
   text-decoration: none;
@@ -2720,7 +2629,7 @@ textarea {
 .instructorBackLink {
   display: inline-block;
   margin-bottom: 20px;
-  color: var(--primary-blue);
+  color: #0149CA;
   font-weight: 600;
   font-size: 0.9rem;
   text-decoration: none;
@@ -2770,7 +2679,7 @@ textarea {
   align-items: center;
   gap: 6px;
   margin: 0;
-  color: var(--primary-blue);
+  color: #0149CA;
   font-weight: 600;
   font-size: 0.85rem;
 }
@@ -2897,70 +2806,6 @@ textarea {
   font-weight: 400;
   line-height: 1.7;
   white-space: pre-line;
-}
-
-.contactSection {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr);
-  gap: 24px;
-  padding: 54px 6vw;
-  background:
-    linear-gradient(135deg, rgba(30, 47, 151, 0.98), rgba(37, 84, 165, 0.94)),
-    var(--primary-blue);
-  color: var(--white);
-}
-
-.contactSection h2 {
-  margin-top: 18px;
-  color: var(--white);
-}
-
-.contactSection p {
-  max-width: 620px;
-  color: var(--white);
-  font-size: 1rem;
-  font-weight: 400;
-  line-height: 1.7;
-}
-
-.contactMethods {
-  display: grid;
-  gap: 10px;
-  align-content: center;
-}
-
-.contactMethods a,
-.contactMethods span {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 8px;
-  color: var(--white);
-  font-size: 1rem;
-  font-weight: 400;
-  backdrop-filter: blur(16px);
-}
-
-.contactMethods a[href*="wa.me"] {
-  background: var(--whatsapp-green);
-  border-color: transparent;
-  border-radius: 999px;
-  box-shadow: 0 10px 25px rgba(27, 94, 32, 0.25);
-  transition: all 0.3s ease;
-}
-
-.contactMethods a[href*="wa.me"]:hover {
-  background: var(--whatsapp-hover);
-  border-color: transparent;
-  transform: translateY(-2px);
-}
-
-.contactMethods a[href*="wa.me"]:active {
-  background: var(--whatsapp-active);
 }
 
 .floatingEnroll {
@@ -3298,7 +3143,7 @@ textarea {
   background: rgba(198, 198, 198, 0.14);
   border: 1px solid var(--line);
   border-radius: 8px;
-  color: var(--primary-blue);
+  color: #0149CA;
   font-size: 0.95rem;
   font-weight: 500;
 }
@@ -3356,7 +3201,7 @@ textarea {
   border: 1px solid rgba(211, 13, 26, 0.22);
   border-left: 4px solid var(--bright-red);
   border-radius: 8px;
-  color: var(--primary-blue);
+  color: #0149CA;
 }
 
 .adminPackageTags strong {
@@ -3490,51 +3335,8 @@ textarea {
 }
 
 @media (max-width: 940px) {
-  .siteHeader {
-    padding: 12px 4vw;
-  }
-
-  .nav {
-    position: fixed;
-    top: 74px;
-    right: 4vw;
-    left: 4vw;
-    display: none;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    padding: 14px;
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    box-shadow: var(--shadow);
-    backdrop-filter: blur(20px);
-  }
-
-  .nav.navOpen {
-    display: flex;
-  }
-
-  .nav a {
-    padding: 13px 12px;
-    border-radius: 8px;
-  }
-
-  .nav a:hover {
-    background: rgba(198, 198, 198, 0.16);
-  }
-
-  .menuButton {
-    display: grid;
-  }
-
-  .enroll-btn {
-    display: none;
-  }
-
   .hero,
-  .enrollSection,
-  .contactSection {
+  .enrollSection {
     grid-template-columns: 1fr;
   }
 
@@ -3582,16 +3384,6 @@ textarea {
 }
 
 @media (max-width: 680px) {
-  .brand img {
-    width: 42px;
-    height: 42px;
-  }
-
-  .brandFull img {
-    width: clamp(150px, 44vw, 190px);
-    height: auto;
-  }
-
   .hero h1 {
     font-size: clamp(2.4rem, 12vw, 3.25rem);
     line-height: 1.08;
@@ -3728,7 +3520,7 @@ textarea {
 
 .appFallback h1 {
   margin: 0 0 10px;
-  color: #1E2F97;
+  color: #0149CA;
   font-size: 28px;
   line-height: 36px;
 }

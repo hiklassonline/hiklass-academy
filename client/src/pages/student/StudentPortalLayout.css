@@ -2,7 +2,7 @@
   --hk-primary: #1E2F97;
   --hk-royal: #2554A5;
   --hk-accent: #D30D1A;
-  --hk-navy: #07162F;
+  --hk-navy: #0D2957;
   --hk-bg: #F5F7FB;
   --hk-card: #FFFFFF;
   --hk-border: #E5E7EB;
@@ -185,7 +185,7 @@
   display: block;
   text-align: center;
   background: #ffffff;
-  color: var(--hk-primary);
+  color: #0149CA;
   font-weight: 700;
   font-size: 0.85rem;
   padding: 9px;

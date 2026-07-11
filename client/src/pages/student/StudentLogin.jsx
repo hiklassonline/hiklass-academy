@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Eye, EyeOff, GraduationCap, LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
 import { brandAssets } from '../../assets';
-import { loginStudent, loginWithGoogleCredential } from '../../services/studentAuthService';
+import { consumeStudentAuthNotice, loginStudent, loginWithGoogleCredential } from '../../services/studentAuthService';
 import GoogleAuthButton from '../../components/GoogleAuthButton';
 import './StudentAuth.css';
 
@@ -19,7 +19,7 @@ function validate(values) {
 export default function StudentLogin() {
   const [values, setValues] = useState({ email: '', password: '', rememberMe: true });
   const [errors, setErrors] = useState({});
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState(() => consumeStudentAuthNotice());
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -139,6 +139,11 @@ export default function StudentLogin() {
               <input type="checkbox" name="rememberMe" checked={values.rememberMe} onChange={updateField} />
               <span>Remember me</span>
             </label>
+            <a href="/student/forgot-password">Forgot password?</a>
+          </div>
+
+          <div className="studentAuthOptions">
+            <span />
             <a href="/student/register">Create an account</a>
           </div>
 

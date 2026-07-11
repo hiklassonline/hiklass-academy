@@ -38,7 +38,7 @@ export default function Modal({ open, onClose, title, children, wide }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '20px 24px 0', gap: '16px',
         }}>
-          <h3 style={{ margin: 0, color: '#1E2F97', fontWeight: 600, fontSize: '18px' }}>{title}</h3>
+          <h3 style={{ margin: 0, color: '#0149CA', fontWeight: 600, fontSize: '18px' }}>{title}</h3>
           <button onClick={onClose} style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: '#6B7280', padding: '4px', borderRadius: '6px',

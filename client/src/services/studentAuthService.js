@@ -3,6 +3,48 @@ import API_URL from '../utils/apiBaseUrl';
 export const STUDENT_TOKEN_KEY = 'hiklass-student-token';
 const STUDENT_SESSION_TOKEN_KEY = 'hiklass-student-session-token';
 const STUDENT_USER_KEY = 'hiklass-student-user';
+const STUDENT_AUTH_NOTICE_KEY = 'hiklass-student-auth-notice';
+
+function redirectToStudentLogin(message) {
+  clearStudentSession();
+  if (message) sessionStorage.setItem(STUDENT_AUTH_NOTICE_KEY, message);
+
+  const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
+  if (currentPath !== '/student/login' && currentPath.startsWith('/student')) {
+    window.location.assign('/student/login');
+  }
+}
+
+function createRequestError(data, fallback, statusCode) {
+  const error = new Error(data.message || fallback);
+  error.locked = data.locked || false;
+  error.reason = data.reason || '';
+  error.status = data.status || '';
+  error.statusCode = statusCode;
+  return error;
+}
+
+async function parseJsonResponse(res) {
+  return res.json().catch(() => ({}));
+}
+
+function handleStudentAuthResponse(res, data, fallbackMessage) {
+  if (res.ok) return;
+
+  if (res.status === 401) {
+    const message = data.message || 'Your session has expired. Please sign in again.';
+    redirectToStudentLogin(message);
+    throw createRequestError({ ...data, message }, fallbackMessage, res.status);
+  }
+
+  throw createRequestError(data, fallbackMessage, res.status);
+}
+
+export function consumeStudentAuthNotice() {
+  const message = sessionStorage.getItem(STUDENT_AUTH_NOTICE_KEY) || '';
+  sessionStorage.removeItem(STUDENT_AUTH_NOTICE_KEY);
+  return message;
+}
 
 export function getStoredStudentToken() {
   return localStorage.getItem(STUDENT_TOKEN_KEY) || sessionStorage.getItem(STUDENT_SESSION_TOKEN_KEY) || '';
@@ -24,14 +66,8 @@ async function studentApi(method, path, body) {
     options.body = JSON.stringify(body);
   }
   const res = await fetch(`${API_URL}${path}`, options);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const error = new Error(data.message || 'Request failed.');
-    error.locked = data.locked || false;
-    error.reason = data.reason || '';
-    error.status = data.status || '';
-    throw error;
-  }
+  const data = await parseJsonResponse(res);
+  handleStudentAuthResponse(res, data, 'Request failed.');
   return data;
 }
 
@@ -80,6 +116,28 @@ export async function loginStudent({ email, password, rememberMe }) {
   return data;
 }
 
+export async function requestPasswordReset(email) {
+  const res = await fetch(`${API_URL}/api/student/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Could not process your request.');
+  return data;
+}
+
+export async function resetPassword({ token, password }) {
+  const res = await fetch(`${API_URL}/api/student/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Could not reset your password.');
+  return data;
+}
+
 export async function loginWithGoogleCredential(credential, rememberMe) {
   const res = await fetch(`${API_URL}/api/student/auth/google`, {
     method: 'POST',
@@ -97,8 +155,8 @@ export async function fetchStudentEnrollments() {
   const res = await fetch(`${API_URL}/api/student/enrollments`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Could not load your enrollments.');
+  const data = await parseJsonResponse(res);
+  handleStudentAuthResponse(res, data, 'Could not load your enrollments.');
   return data.orders || [];
 }
 
@@ -107,8 +165,8 @@ export async function fetchStudentPayments() {
   const res = await fetch(`${API_URL}/api/student/payments`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Could not load your payments.');
+  const data = await parseJsonResponse(res);
+  handleStudentAuthResponse(res, data, 'Could not load your payments.');
   return data.payments || [];
 }
 
@@ -140,8 +198,8 @@ export async function uploadStudentAvatar(file) {
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Could not upload your photo.');
+  const data = await parseJsonResponse(res);
+  handleStudentAuthResponse(res, data, 'Could not upload your photo.');
   if (data.student) localStorage.setItem(STUDENT_USER_KEY, JSON.stringify(data.student));
   return data.student;
 }
@@ -201,8 +259,8 @@ export async function sendStudentVoiceNote(blob) {
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Could not send your voice note.');
+  const data = await parseJsonResponse(res);
+  handleStudentAuthResponse(res, data, 'Could not send your voice note.');
   return data.message;
 }
 
@@ -245,7 +303,7 @@ export async function submitStudentAssignment(assignmentId, { file, notes }) {
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Could not submit your assignment.');
+  const data = await parseJsonResponse(res);
+  handleStudentAuthResponse(res, data, 'Could not submit your assignment.');
   return data.submission;
 }
