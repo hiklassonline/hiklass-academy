@@ -78,6 +78,8 @@ import AdminBlogManager from './pages/admin/AdminBlogManager.jsx';
 import BlogPage from './pages/BlogPage.jsx';
 import AboutPage from './pages/AboutPage.jsx';
 import ContactPage from './pages/ContactPage.jsx';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage.jsx';
+import TermsAndConditionsPage from './pages/TermsAndConditionsPage.jsx';
 import StudentLogin from './pages/student/StudentLogin.jsx';
 import StudentRegister from './pages/student/StudentRegister.jsx';
 import StudentResetPassword from './pages/student/StudentResetPassword.jsx';
@@ -3080,6 +3082,8 @@ function App() {
   const isBlogRoute = adminPath === '/blog' || Boolean(blogArticleMatch);
   const isAboutRoute = adminPath === '/about';
   const isContactRoute = adminPath === '/contact';
+  const isPrivacyPolicyRoute = adminPath === '/privacy-policy';
+  const isTermsRoute = adminPath === '/terms-and-conditions';
   const instructorProfileMatch = adminPath.match(/^\/instructor\/(.+)$/);
   const selectedCount = selectedCourses.length + selectedPackages.length;
 
@@ -3185,6 +3189,24 @@ function App() {
     return (
       <>
         <ContactPage />
+        <SmartsuppChat enabled />
+      </>
+    );
+  }
+
+  if (isPrivacyPolicyRoute) {
+    return (
+      <>
+        <PrivacyPolicyPage />
+        <SmartsuppChat enabled />
+      </>
+    );
+  }
+
+  if (isTermsRoute) {
+    return (
+      <>
+        <TermsAndConditionsPage />
         <SmartsuppChat enabled />
       </>
     );

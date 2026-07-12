@@ -1,0 +1,101 @@
+.legalHero {
+  background: linear-gradient(135deg, var(--about-navy), #06113E 60%, #143b8f);
+  color: #fff;
+  padding: 22px 6vw 44px;
+}
+
+.legalBreadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+.legalBreadcrumb a { color: #fff; text-decoration: none; font-weight: 600; }
+.legalBreadcrumb svg { opacity: 0.6; }
+
+.legalHero h1 {
+  margin: 0 0 10px;
+  font-family: Poppins, Inter, sans-serif;
+  font-size: clamp(2rem, 3.6vw, 2.6rem);
+  line-height: 1.15;
+}
+
+.legalDates {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.92rem;
+}
+.legalDates strong { color: #fff; }
+
+.legalContent {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 56px 6vw 72px;
+  color: #374151;
+  font-size: 0.98rem;
+  line-height: 1.75;
+}
+
+.legalContent h2 {
+  margin: 40px 0 14px;
+  color: var(--about-navy);
+  font-size: 1.3rem;
+  line-height: 1.3;
+  padding-top: 12px;
+  border-top: 1px solid var(--about-border);
+}
+.legalContent h2:first-of-type { border-top: none; padding-top: 0; }
+
+.legalContent h3 {
+  margin: 22px 0 10px;
+  color: var(--about-navy);
+  font-size: 1.02rem;
+}
+
+.legalContent p { margin: 0 0 14px; }
+
+.legalContent ul {
+  margin: 0 0 16px;
+  padding-left: 22px;
+  display: grid;
+  gap: 6px;
+}
+.legalContent ul li { color: #374151; }
+
+.legalContactList {
+  list-style: none;
+  padding-left: 0;
+  margin: 12px 0 18px;
+  display: grid;
+  gap: 8px;
+}
+.legalContactList li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #374151;
+}
+.legalContactList svg { color: var(--primary-blue, #0149CA); flex-shrink: 0; }
+.legalContactList a { color: #374151; text-decoration: none; }
+.legalContactList a:hover { color: var(--primary-blue, #0149CA); text-decoration: underline; }
+
+.legalContactName {
+  margin: 0 0 4px;
+  font-weight: 800;
+  color: var(--about-navy);
+}
+
+.legalCopyright {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--about-border);
+  color: var(--about-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .legalContent { padding: 40px 6vw 56px; }
+}
