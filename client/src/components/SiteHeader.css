@@ -154,11 +154,11 @@
 }
 
 @media (max-width: 640px) {
-  .siteHeaderBrand img { width: 300px; }
+  .siteHeaderBrand img { width: 150px; }
 }
 
 @media (max-width: 420px) {
-  .siteHeaderBrand img { width: 240px; }
+  .siteHeaderBrand img { width: 120px; }
   .siteHeaderMobileLogin,
   .siteHeaderMobileEnroll {
     font-size: 0.72rem;
