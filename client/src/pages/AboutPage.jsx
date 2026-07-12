@@ -369,6 +369,7 @@ function TechStack() {
   return (
     <section className="aboutTechSection">
       <h2>Technologies We Teach</h2>
+      <span className="aboutTechEyebrow">Tools &amp; platforms our students learn to work with</span>
       <div className="aboutTechMarquee">
         <div className="aboutTechTrack">
           {loopedTechnologies.map(({ name, logo }, index) => (

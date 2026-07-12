@@ -285,21 +285,56 @@
 .aboutLeaderSocial a:hover { background: var(--primary-blue, #1E2F97); color: #fff; }
 
 /* Technologies */
-.aboutTechSection { padding: 46px 6vw; border-top: 1px solid var(--about-border); border-bottom: 1px solid var(--about-border); text-align: center; }
-.aboutTechSection h2 { margin: 0 0 24px; color: var(--about-navy); font-size: 1.2rem; }
+.aboutTechSection {
+  position: relative;
+  padding: 56px 0;
+  background: linear-gradient(180deg, var(--about-bg-alt) 0%, #fff 100%);
+  border-top: 1px solid var(--about-border);
+  border-bottom: 1px solid var(--about-border);
+  text-align: center;
+  overflow: hidden;
+}
+.aboutTechSection::before,
+.aboutTechSection::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(30, 47, 151, 0.18) 50%, transparent);
+}
+.aboutTechSection::before { top: 0; }
+.aboutTechSection::after { bottom: 0; }
+.aboutTechSection h2 {
+  margin: 0 0 6px;
+  color: var(--about-navy);
+  font-size: 1.2rem;
+}
+.aboutTechEyebrow {
+  display: block;
+  margin: 0 0 22px;
+  color: var(--about-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .aboutTechMarquee {
+  position: relative;
   overflow: hidden;
   width: 100%;
-  mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+  padding: 6px 0;
+  mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
 }
 
 .aboutTechTrack {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   width: max-content;
-  animation: aboutTechScroll 28s linear infinite;
+  animation: aboutTechScroll 32s linear infinite;
 }
 
 .aboutTechMarquee:hover .aboutTechTrack {
@@ -317,6 +352,12 @@
   }
   .aboutTechMarquee {
     overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .aboutTechMarquee::-webkit-scrollbar {
+    display: none;
+    height: 0;
   }
 }
 
@@ -326,10 +367,19 @@
   justify-content: center;
   width: 128px;
   height: 128px;
-  padding: 28px;
+  padding: 26px;
   border-radius: 24px;
-  background: var(--about-bg-alt);
+  background: #fff;
+  border: 1px solid var(--about-border);
+  box-shadow: 0 6px 18px rgba(7, 22, 47, 0.05);
   flex-shrink: 0;
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.aboutTechBadge:hover {
+  transform: translateY(-4px);
+  border-color: rgba(30, 47, 151, 0.18);
+  box-shadow: 0 16px 32px rgba(7, 22, 47, 0.12);
 }
 
 .aboutTechLogo {
@@ -337,6 +387,12 @@
   height: 100%;
   object-fit: contain;
   flex-shrink: 0;
+  filter: grayscale(1) opacity(0.55);
+  transition: filter 220ms ease;
+}
+
+.aboutTechBadge:hover .aboutTechLogo {
+  filter: grayscale(0) opacity(1);
 }
 
 /* CTA */
