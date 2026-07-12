@@ -342,8 +342,8 @@
 }
 
 @keyframes aboutTechScroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -387,12 +387,6 @@
   height: 100%;
   object-fit: contain;
   flex-shrink: 0;
-  filter: grayscale(1) opacity(0.55);
-  transition: filter 220ms ease;
-}
-
-.aboutTechBadge:hover .aboutTechLogo {
-  filter: grayscale(0) opacity(1);
 }
 
 /* CTA */
