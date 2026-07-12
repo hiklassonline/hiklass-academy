@@ -22,6 +22,7 @@ import {
 import { brandAssets } from '../../assets';
 import { clearStudentSession, getStoredStudentUser } from '../../services/studentAuthService';
 import getAssetUrl from '../../utils/getAssetUrl';
+import { safeLocalStorage as localStorage } from '../../utils/safeStorage';
 import './StudentPortalLayout.css';
 
 export const STUDENT_NAV_ITEMS = [

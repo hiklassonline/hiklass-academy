@@ -90,6 +90,7 @@ import { ADMIN_TOKEN_KEY, clearAdminSession, getStoredAdminToken } from './servi
 import { getStoredStudentToken } from './services/studentAuthService.js';
 import API_URL from './utils/apiBaseUrl.js';
 import getAssetUrl from './utils/getAssetUrl.js';
+import { safeLocalStorage as localStorage } from './utils/safeStorage.js';
 import './styles.css';
 
 const WHATSAPP_NUMBER = '237651251941';

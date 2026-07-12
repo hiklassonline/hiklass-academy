@@ -6,6 +6,7 @@ import { getStoredAdminToken } from '../../services/authService';
 import { getStoredAdminUser } from '../../services/adminProfileService';
 import API_URL from '../../utils/apiBaseUrl';
 import AdminAvatar from './AdminAvatar.jsx';
+import { safeLocalStorage as localStorage } from '../../utils/safeStorage';
 
 const notifTypeIcons = { enrollment: Mail, payment: CreditCard, message: MessageSquare, error: AlertCircle, info: Info };
 const notifTypeColors = { enrollment: '#0149CA', payment: '#059669', message: '#2554A5', error: '#D30D1A', info: '#6B7280' };

@@ -1,4 +1,5 @@
 import API_URL from '../utils/apiBaseUrl';
+import { safeLocalStorage as localStorage, safeSessionStorage as sessionStorage } from '../utils/safeStorage';
 
 export const STUDENT_TOKEN_KEY = 'hiklass-student-token';
 const STUDENT_SESSION_TOKEN_KEY = 'hiklass-student-session-token';

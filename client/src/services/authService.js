@@ -1,4 +1,5 @@
 import API_URL from '../utils/apiBaseUrl';
+import { safeLocalStorage as localStorage, safeSessionStorage as sessionStorage } from '../utils/safeStorage';
 
 export const ADMIN_TOKEN_KEY = 'hiklass-admin-token';
 const ADMIN_SESSION_TOKEN_KEY = 'hiklass-admin-session-token';
