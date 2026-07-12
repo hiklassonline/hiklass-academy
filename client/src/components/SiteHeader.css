@@ -97,7 +97,6 @@
     padding: 12px 16px;
   }
   .siteHeaderBrand {
-    margin-right: auto;
     min-width: 0;
     flex: 0 1 230px;
   }
@@ -135,8 +134,10 @@
   .siteHeaderMobileActions {
     display: flex;
     align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
+    justify-content: space-between;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
   }
 
   .siteHeaderMobileLogin,
