@@ -89,6 +89,7 @@
 @media (max-width: 1100px) {
   .siteHeaderBar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
     height: auto;
@@ -153,11 +154,11 @@
 }
 
 @media (max-width: 640px) {
-  .siteHeaderBrand img { width: 150px; }
+  .siteHeaderBrand img { width: 300px; }
 }
 
 @media (max-width: 420px) {
-  .siteHeaderBrand img { width: 120px; }
+  .siteHeaderBrand img { width: 240px; }
   .siteHeaderMobileLogin,
   .siteHeaderMobileEnroll {
     font-size: 0.72rem;
