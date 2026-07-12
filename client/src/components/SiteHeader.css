@@ -154,14 +154,14 @@
 }
 
 @media (max-width: 640px) {
-  .siteHeaderBrand img { width: 170px; }
-}
-
-@media (max-width: 420px) {
-  .siteHeaderBrand img { width: 130px; }
+  .siteHeaderBrand img { width: 190px; }
   .siteHeaderMobileLogin,
   .siteHeaderMobileEnroll {
     font-size: 0.7rem;
     padding: 7px 8px;
   }
+}
+
+@media (max-width: 420px) {
+  .siteHeaderBrand img { width: 145px; }
 }
