@@ -4254,43 +4254,42 @@ app.post('/api/student/auth/forgot-password', studentAuthLimiter, async (req, re
     const accounts = await readJsonFile('student-accounts');
     const account = accounts.find((item) => item.email === email);
 
-    // Always respond with the same generic message, whether or not the account exists,
-    // so this endpoint can't be used to discover which emails are registered.
-    const genericMessage = 'If an account with that email exists, a password reset link has been sent.';
-
-    if (account) {
-      const token = generateSecureToken();
-      const resets = await readJsonFile('password-resets');
-      const filtered = resets.filter((item) => item.accountId !== account.id);
-      filtered.push({
-        token,
-        accountId: account.id,
-        email: account.email,
-        expiresAt: new Date(Date.now() + PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000).toISOString(),
-        createdAt: new Date().toISOString(),
-      });
-      await writeJsonFile('password-resets', filtered);
-
-      const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim();
-      const resetUrl = `${clientUrl}/student/reset-password?token=${token}`;
-
-      const result = await sendPasswordReset({
-        to: account.email,
-        name: account.name,
-        resetUrl,
-        expiresInMinutes: PASSWORD_RESET_EXPIRY_MINUTES,
-      });
-
-      await recordEmailDelivery({
-        id: `password-reset-${account.id}-${Date.now()}`,
-        recipient: account.email,
-        subject: '🔒 Reset Your HIKLASS Academy Password',
-        status: result.success ? 'Sent' : 'Failed',
-        errorMessage: result.success ? '' : explainSmtpError(result.error, result.error?.smtpLastConfig),
-      });
+    if (!account) {
+      res.status(404).json({ message: 'No account found with that email address.' });
+      return;
     }
 
-    res.json({ message: genericMessage });
+    const token = generateSecureToken();
+    const resets = await readJsonFile('password-resets');
+    const filtered = resets.filter((item) => item.accountId !== account.id);
+    filtered.push({
+      token,
+      accountId: account.id,
+      email: account.email,
+      expiresAt: new Date(Date.now() + PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+    });
+    await writeJsonFile('password-resets', filtered);
+
+    const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim();
+    const resetUrl = `${clientUrl}/student/reset-password?token=${token}`;
+
+    const result = await sendPasswordReset({
+      to: account.email,
+      name: account.name,
+      resetUrl,
+      expiresInMinutes: PASSWORD_RESET_EXPIRY_MINUTES,
+    });
+
+    await recordEmailDelivery({
+      id: `password-reset-${account.id}-${Date.now()}`,
+      recipient: account.email,
+      subject: '🔒 Reset Your HIKLASS Academy Password',
+      status: result.success ? 'Sent' : 'Failed',
+      errorMessage: result.success ? '' : explainSmtpError(result.error, result.error?.smtpLastConfig),
+    });
+
+    res.json({ message: 'A password reset link has been sent to your email.' });
   } catch (error) {
     console.error('Student forgot-password failed:', error);
     res.status(500).json({ message: 'Could not process your request. Please try again.' });

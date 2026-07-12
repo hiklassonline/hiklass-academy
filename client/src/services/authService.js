@@ -22,6 +22,15 @@ export function saveAdminSession(payload, rememberMe) {
   }
 
   if (user) localStorage.setItem(ADMIN_USER_KEY, user);
+
+  const persisted = rememberMe
+    ? localStorage.getItem(ADMIN_TOKEN_KEY)
+    : sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY);
+  if (persisted !== token) {
+    throw new Error(
+      "Signed in, but your browser is blocking this site from staying signed in. Please allow cookies/site data for hiklassacademy.com in your browser's privacy settings, then try again.",
+    );
+  }
 }
 
 export function clearAdminSession() {

@@ -85,6 +85,15 @@ export function saveStudentSession(payload, rememberMe) {
   }
 
   if (student) localStorage.setItem(STUDENT_USER_KEY, student);
+
+  const persisted = rememberMe
+    ? localStorage.getItem(STUDENT_TOKEN_KEY)
+    : sessionStorage.getItem(STUDENT_SESSION_TOKEN_KEY);
+  if (persisted !== token) {
+    throw new Error(
+      "Signed in, but your browser is blocking this site from staying signed in. Please allow cookies/site data for hiklassacademy.com in your browser's privacy settings, then try again.",
+    );
+  }
 }
 
 export function clearStudentSession() {
