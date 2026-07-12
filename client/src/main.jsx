@@ -3034,7 +3034,7 @@ function PlaceholderPage({ page, orders }) {
   );
 }
 
-function AppFallback() {
+function AppFallback({ errorDetails }) {
   return (
     <main className="appFallback">
       <section>
@@ -3042,6 +3042,11 @@ function AppFallback() {
         <h1>HIKLASS Academy</h1>
         <p>The website could not finish loading. Please refresh this page or contact info@hiklassacademy.com.</p>
         <button type="button" onClick={() => window.location.reload()}>Reload page</button>
+        {errorDetails ? (
+          <pre style={{ marginTop: 20, maxWidth: 560, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, color: '#9CA3AF', textAlign: 'left' }}>
+            {errorDetails}
+          </pre>
+        ) : null}
       </section>
     </main>
   );
@@ -3050,11 +3055,11 @@ function AppFallback() {
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorDetails: '' };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorDetails: `${error?.message || error}\n\n${error?.stack || ''}` };
   }
 
   componentDidCatch(error, info) {
@@ -3062,7 +3067,7 @@ class AppErrorBoundary extends React.Component {
   }
 
   render() {
-    if (this.state.hasError) return <AppFallback />;
+    if (this.state.hasError) return <AppFallback errorDetails={this.state.errorDetails} />;
     return this.props.children;
   }
 }
