@@ -11,9 +11,7 @@ import {
   Code2,
   Eye,
   Facebook,
-  Figma,
   Flag,
-  Github,
   GraduationCap,
   Heart,
   Instagram,
@@ -38,6 +36,19 @@ import { defaultTestimonials } from '../data/testimonials.js';
 import { fetchTestimonials } from '../services/api.js';
 import API_URL from '../utils/apiBaseUrl.js';
 import getAssetUrl from '../utils/getAssetUrl.js';
+import microsoftLogo from '../assets/technologies-we-teach/Microsoft.svg';
+import adobeLogo from '../assets/technologies-we-teach/Adobe.svg';
+import googleLogo from '../assets/technologies-we-teach/Google.svg';
+import metaLogo from '../assets/technologies-we-teach/Meta.svg';
+import awsLogo from '../assets/technologies-we-teach/AWS.svg';
+import githubLogo from '../assets/technologies-we-teach/GitHub.svg';
+import dockerLogo from '../assets/technologies-we-teach/Docker.svg';
+import nodejsLogo from '../assets/technologies-we-teach/Nodejs.svg';
+import mongodbLogo from '../assets/technologies-we-teach/MongoDB.svg';
+import mysqlLogo from '../assets/technologies-we-teach/MySQL.svg';
+import figmaLogo from '../assets/technologies-we-teach/Figma.svg';
+import canvaLogo from '../assets/technologies-we-teach/Canva.svg';
+import reactLogo from '../assets/technologies-we-teach/React.svg';
 import './AboutPage.css';
 
 const HERO_STATS = [
@@ -84,17 +95,19 @@ const IMPACT_STATS = [
 ];
 
 const TECHNOLOGIES = [
-  { name: 'Microsoft' },
-  { name: 'Adobe' },
-  { name: 'Google' },
-  { name: 'Meta' },
-  { name: 'AWS' },
-  { name: 'GitHub', icon: Github },
-  { name: 'Docker' },
-  { name: 'Node.js' },
-  { name: 'MongoDB' },
-  { name: 'Figma', icon: Figma },
-  { name: 'Canva' },
+  { name: 'Microsoft', logo: microsoftLogo },
+  { name: 'Adobe', logo: adobeLogo },
+  { name: 'Google', logo: googleLogo },
+  { name: 'Meta', logo: metaLogo },
+  { name: 'AWS', logo: awsLogo },
+  { name: 'GitHub', logo: githubLogo },
+  { name: 'Docker', logo: dockerLogo },
+  { name: 'Node.js', logo: nodejsLogo },
+  { name: 'MongoDB', logo: mongodbLogo },
+  { name: 'MySQL', logo: mysqlLogo },
+  { name: 'Figma', logo: figmaLogo },
+  { name: 'Canva', logo: canvaLogo },
+  { name: 'React', logo: reactLogo },
 ];
 
 function avatarInitials(name = 'HA') {
@@ -356,8 +369,10 @@ function TechStack() {
     <section className="aboutTechSection">
       <h2>Technologies We Teach</h2>
       <div className="aboutTechRow">
-        {TECHNOLOGIES.map(({ name, icon: Icon }) => (
-          <span className="aboutTechBadge" key={name}>{Icon ? <Icon size={16} /> : null} {name}</span>
+        {TECHNOLOGIES.map(({ name, logo }) => (
+          <span className="aboutTechBadge" key={name}>
+            <img className="aboutTechLogo" src={logo} alt={`${name} logo`} loading="lazy" /> {name}
+          </span>
         ))}
       </div>
     </section>
