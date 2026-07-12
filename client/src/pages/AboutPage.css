@@ -287,15 +287,15 @@
 /* Technologies */
 .aboutTechSection { padding: 46px 6vw; border-top: 1px solid var(--about-border); border-bottom: 1px solid var(--about-border); text-align: center; }
 .aboutTechSection h2 { margin: 0 0 24px; color: var(--about-navy); font-size: 1.2rem; }
-.aboutTechRow { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.aboutTechRow { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
 .aboutTechBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
-  padding: 14px;
-  border-radius: 16px;
+  width: 128px;
+  height: 128px;
+  padding: 28px;
+  border-radius: 24px;
   background: var(--about-bg-alt);
 }
 
