@@ -95,7 +95,7 @@ export default function SiteHeader() {
       )}
 
       <button className="siteHeaderMenuBtn" type="button" onClick={() => setOpen((value) => !value)} aria-label="Toggle menu">
-        {open ? <X size={22} /> : <Menu size={22} />}
+        {open ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       <div className="siteHeaderMobileActions">

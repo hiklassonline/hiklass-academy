@@ -91,17 +91,17 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     height: auto;
     min-height: 76px;
-    padding: 12px 22px;
+    padding: 12px 16px;
   }
-  .siteHeaderBrand { margin-right: auto; }
+  .siteHeaderBrand { margin-right: auto; min-width: 0; }
   .siteHeaderNav {
     display: none;
     position: absolute;
-    left: 22px;
-    right: 22px;
+    left: 16px;
+    right: 16px;
     top: 100%;
     background: #fff;
     border: 1px solid #E5E7EB;
@@ -119,14 +119,14 @@
     border: 1px solid #E5E7EB;
     background: #fff;
     border-radius: 8px;
-    padding: 10px 14px;
+    padding: 8px 10px;
     flex-shrink: 0;
   }
 
   .siteHeaderMobileActions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
   }
 
@@ -135,8 +135,8 @@
     text-decoration: none;
     white-space: nowrap;
     font-weight: 700;
-    font-size: 0.8rem;
-    padding: 9px 12px;
+    font-size: 0.76rem;
+    padding: 8px 10px;
     border-radius: 8px;
   }
 
@@ -154,14 +154,14 @@
 }
 
 @media (max-width: 640px) {
-  .siteHeaderBrand img { width: 150px; }
+  .siteHeaderBrand img { width: 170px; }
 }
 
 @media (max-width: 420px) {
-  .siteHeaderBrand img { width: 120px; }
+  .siteHeaderBrand img { width: 130px; }
   .siteHeaderMobileLogin,
   .siteHeaderMobileEnroll {
-    font-size: 0.72rem;
-    padding: 8px 9px;
+    font-size: 0.7rem;
+    padding: 7px 8px;
   }
 }
