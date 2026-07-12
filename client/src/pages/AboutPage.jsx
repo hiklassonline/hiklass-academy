@@ -365,15 +365,18 @@ function LeadInstructor() {
 }
 
 function TechStack() {
+  const loopedTechnologies = [...TECHNOLOGIES, ...TECHNOLOGIES];
   return (
     <section className="aboutTechSection">
       <h2>Technologies We Teach</h2>
-      <div className="aboutTechRow">
-        {TECHNOLOGIES.map(({ name, logo }) => (
-          <span className="aboutTechBadge" key={name} title={name}>
-            <img className="aboutTechLogo" src={logo} alt={`${name} logo`} loading="lazy" />
-          </span>
-        ))}
+      <div className="aboutTechMarquee">
+        <div className="aboutTechTrack">
+          {loopedTechnologies.map(({ name, logo }, index) => (
+            <span className="aboutTechBadge" key={`${name}-${index}`} title={name} aria-hidden={index >= TECHNOLOGIES.length}>
+              <img className="aboutTechLogo" src={logo} alt={index < TECHNOLOGIES.length ? `${name} logo` : ''} loading="lazy" />
+            </span>
+          ))}
+        </div>
       </div>
     </section>
   );
