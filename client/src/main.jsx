@@ -1520,7 +1520,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
   const recentOrders = useMemo(() => filteredOrders.slice(0, 6), [filteredOrders]);
 
   async function api(method, path, body) {
-    const opts = { method, headers: { 'Content-Type': 'application/json', 'x-admin-token': token } };
+    const opts = { method, headers: { 'Content-Type': 'application/json', 'x-admin-token': token }, credentials: 'include' };
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(`${API_URL}${path}`, opts);
     const data = await res.json().catch(() => ({}));
@@ -1627,6 +1627,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
         method: 'POST',
         headers: { 'x-admin-token': token },
         body: formData,
+        credentials: 'include',
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || 'Could not upload photo.');
@@ -1651,6 +1652,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
         method: 'POST',
         headers: { 'x-admin-token': token },
         body: formData,
+        credentials: 'include',
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || 'Could not upload image.');
@@ -1677,6 +1679,7 @@ function AdminDashboard({ initialPage = getAdminPageFromPath() }) {
         method: 'POST',
         headers: { 'x-admin-token': token },
         body: formData,
+        credentials: 'include',
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || 'Could not upload image.');
@@ -3073,6 +3076,34 @@ class AppErrorBoundary extends React.Component {
   }
 }
 
+// Some browsers (privacy modes, certain in-app browsers) block localStorage/
+// sessionStorage entirely, so a local token can never be stored even after a
+// successful login. In that case the server still recognizes the session via
+// an httpOnly cookie. This gate trusts a local token immediately when present
+// (fast path, no behavior change for the vast majority of users), and only
+// falls back to asking the server when there is none, instead of assuming
+// "no local token" always means "not logged in".
+function SessionGate({ hasLocalToken, checkUrl, loading, deniedRedirectPath, deniedContent, children }) {
+  const [verified, setVerified] = useState(hasLocalToken ? true : null);
+
+  React.useEffect(() => {
+    if (hasLocalToken) return undefined;
+    let cancelled = false;
+    fetch(checkUrl, { credentials: 'include', cache: 'no-store' })
+      .then((res) => { if (!cancelled) setVerified(res.ok); })
+      .catch(() => { if (!cancelled) setVerified(false); });
+    return () => { cancelled = true; };
+  }, [hasLocalToken, checkUrl]);
+
+  React.useEffect(() => {
+    if (verified === false) window.history.replaceState(null, '', deniedRedirectPath);
+  }, [verified, deniedRedirectPath]);
+
+  if (verified === null) return loading;
+  if (verified === false) return deniedContent;
+  return children;
+}
+
 function App() {
   const [selectedCourses, setSelectedCourses] = useState([]);
   const [selectedPackages, setSelectedPackages] = useState([]);
@@ -3131,14 +3162,20 @@ function App() {
   }
 
   if (isAdminDashboardRoute && !isAdminLoginRoute) {
-    if (!getStoredAdminToken()) {
-      window.history.replaceState(null, '', '/admin/login');
-      return <AdminLogin />;
-    }
     if (adminPath === '/admin') {
       window.history.replaceState(null, '', '/admin/dashboard');
     }
-    return <AdminDashboard initialPage={getAdminPageFromPath()} />;
+    return (
+      <SessionGate
+        hasLocalToken={Boolean(getStoredAdminToken())}
+        checkUrl={`${API_URL}/api/admin/profile`}
+        loading={<div className="appFallback"><section><p>Loading...</p></section></div>}
+        deniedRedirectPath="/admin/login"
+        deniedContent={<AdminLogin />}
+      >
+        <AdminDashboard initialPage={getAdminPageFromPath()} />
+      </SessionGate>
+    );
   }
 
   if (isStudentLoginRoute) {
@@ -3162,15 +3199,21 @@ function App() {
   }
 
   if (isStudentPortalRoute) {
-    if (!getStoredStudentToken()) {
-      window.history.replaceState(null, '', '/student/login');
-      return <StudentLogin />;
-    }
     if (adminPath === '/student') {
       window.history.replaceState(null, '', '/student/dashboard');
-      return <StudentPortal path="/student/dashboard" />;
     }
-    return <StudentPortal path={adminPath} />;
+    const portalPath = adminPath === '/student' ? '/student/dashboard' : adminPath;
+    return (
+      <SessionGate
+        hasLocalToken={Boolean(getStoredStudentToken())}
+        checkUrl={`${API_URL}/api/student/me`}
+        loading={<div className="appFallback"><section><p>Loading...</p></section></div>}
+        deniedRedirectPath="/student/login"
+        deniedContent={<StudentLogin />}
+      >
+        <StudentPortal path={portalPath} />
+      </SessionGate>
+    );
   }
 
   if (isBlogRoute) {

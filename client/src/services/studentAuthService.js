@@ -61,7 +61,7 @@ export function getStoredStudentUser() {
 
 async function studentApi(method, path, body) {
   const token = getStoredStudentToken();
-  const options = { method, headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' };
+  const options = { method, headers: { Authorization: `Bearer ${token}` }, cache: 'no-store', credentials: 'include' };
   if (body) {
     options.headers['Content-Type'] = 'application/json';
     options.body = JSON.stringify(body);
@@ -85,21 +85,19 @@ export function saveStudentSession(payload, rememberMe) {
   }
 
   if (student) localStorage.setItem(STUDENT_USER_KEY, student);
-
-  const persisted = rememberMe
-    ? localStorage.getItem(STUDENT_TOKEN_KEY)
-    : sessionStorage.getItem(STUDENT_SESSION_TOKEN_KEY);
-  if (persisted !== token) {
-    throw new Error(
-      "Signed in, but your browser is blocking this site from staying signed in. Please allow cookies/site data for hiklassacademy.com in your browser's privacy settings, then try again.",
-    );
-  }
+  // Note: if the browser blocks localStorage/sessionStorage, the above calls
+  // silently no-op (see safeStorage.js). That's fine — the server also set an
+  // httpOnly session cookie on this response, which SessionGate (main.jsx)
+  // falls back to verifying, so the user stays signed in either way.
 }
 
 export function clearStudentSession() {
   localStorage.removeItem(STUDENT_TOKEN_KEY);
   localStorage.removeItem(STUDENT_USER_KEY);
   sessionStorage.removeItem(STUDENT_SESSION_TOKEN_KEY);
+  // Also clear the httpOnly session cookie (used as a fallback when browser
+  // storage is blocked); fire-and-forget, nothing to do if it fails.
+  fetch(`${API_URL}/api/student/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
 }
 
 export async function registerStudent({ name, email, phone, password, rememberMe }) {
@@ -107,6 +105,7 @@ export async function registerStudent({ name, email, phone, password, rememberMe
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, email, phone, password }),
+    credentials: 'include',
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Unable to create your account.');
@@ -119,6 +118,7 @@ export async function loginStudent({ email, password, rememberMe }) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
+    credentials: 'include',
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Unable to sign in.');
@@ -131,6 +131,7 @@ export async function requestPasswordReset(email) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
+    credentials: 'include',
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Could not process your request.');
@@ -142,6 +143,7 @@ export async function resetPassword({ token, password }) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, password }),
+    credentials: 'include',
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Could not reset your password.');
@@ -153,6 +155,7 @@ export async function loginWithGoogleCredential(credential, rememberMe) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ credential }),
+    credentials: 'include',
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Unable to sign in with Google.');
@@ -164,6 +167,7 @@ export async function fetchStudentEnrollments() {
   const token = getStoredStudentToken();
   const res = await fetch(`${API_URL}/api/student/enrollments`, {
     headers: { Authorization: `Bearer ${token}` },
+    credentials: 'include',
   });
   const data = await parseJsonResponse(res);
   handleStudentAuthResponse(res, data, 'Could not load your enrollments.');
@@ -174,6 +178,7 @@ export async function fetchStudentPayments() {
   const token = getStoredStudentToken();
   const res = await fetch(`${API_URL}/api/student/payments`, {
     headers: { Authorization: `Bearer ${token}` },
+    credentials: 'include',
   });
   const data = await parseJsonResponse(res);
   handleStudentAuthResponse(res, data, 'Could not load your payments.');
@@ -207,6 +212,7 @@ export async function uploadStudentAvatar(file) {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
+    credentials: 'include',
   });
   const data = await parseJsonResponse(res);
   handleStudentAuthResponse(res, data, 'Could not upload your photo.');
@@ -268,6 +274,7 @@ export async function sendStudentVoiceNote(blob) {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
+    credentials: 'include',
   });
   const data = await parseJsonResponse(res);
   handleStudentAuthResponse(res, data, 'Could not send your voice note.');
@@ -312,6 +319,7 @@ export async function submitStudentAssignment(assignmentId, { file, notes }) {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
+    credentials: 'include',
   });
   const data = await parseJsonResponse(res);
   handleStudentAuthResponse(res, data, 'Could not submit your assignment.');

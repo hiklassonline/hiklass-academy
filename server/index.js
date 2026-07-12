@@ -1,4 +1,5 @@
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
@@ -52,6 +53,25 @@ if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'production') {
   console.warn('JWT_SECRET is not set; using an insecure development fallback. Set JWT_SECRET in server/.env before deploying.');
 }
 const STUDENT_TOKEN_EXPIRY = '30d';
+const STUDENT_COOKIE_NAME = 'hiklass_student_token';
+const ADMIN_COOKIE_NAME = 'hiklass_admin_token';
+const STUDENT_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days, matches STUDENT_TOKEN_EXPIRY
+const ADMIN_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// Cookie-based session fallback: some mobile browsers (privacy modes, certain
+// in-app browsers) block localStorage/sessionStorage entirely, which breaks
+// the primary Bearer-token auth flow. Cookies use a different browser storage
+// mechanism that isn't subject to the same restriction, so login still works.
+function authCookieOptions(maxAgeMs) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: maxAgeMs,
+  };
+}
+
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const googleAuthClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 const BUSINESS_NAME = process.env.BUSINESS_NAME || 'HIKLASS Academy';
@@ -250,8 +270,10 @@ app.use(
       callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
   }),
 );
+app.use(cookieParser());
 app.use(express.json({ limit: '100kb' }));
 app.use((error, _req, res, next) => {
   if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
@@ -514,7 +536,7 @@ function requireAdmin(req, res, next) {
     return;
   }
 
-  const token = req.get('x-admin-token') || '';
+  const token = req.get('x-admin-token') || req.cookies?.[ADMIN_COOKIE_NAME] || '';
   if (token !== ADMIN_TOKEN) {
     res.status(401).json({ message: 'Admin access denied.' });
     return;
@@ -530,7 +552,7 @@ async function requireStudent(req, res, next) {
   }
 
   const authHeader = req.get('authorization') || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const token = (authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '') || req.cookies?.[STUDENT_COOKIE_NAME] || '';
   if (!token) {
     res.status(401).json({ message: 'Student access denied.' });
     return;
@@ -2250,6 +2272,7 @@ app.post('/api/admin/auth/login', adminAuthLimiter, async (req, res) => {
   }
 
   await recordActivity('Admin login', email, rememberMe ? 'Remembered session' : 'Browser session');
+  res.cookie(ADMIN_COOKIE_NAME, ADMIN_TOKEN, authCookieOptions(ADMIN_COOKIE_MAX_AGE_MS));
   res.json({
     token: ADMIN_TOKEN,
     tokenType: 'AdminToken',
@@ -2259,6 +2282,11 @@ app.post('/api/admin/auth/login', adminAuthLimiter, async (req, res) => {
       role: 'Super Admin',
     },
   });
+});
+
+app.post('/api/admin/auth/logout', (_req, res) => {
+  res.clearCookie(ADMIN_COOKIE_NAME, { path: '/' });
+  res.json({ message: 'Signed out.' });
 });
 
 app.post('/api/admin/auth/change-password', requireAdmin, async (req, res) => {
@@ -4212,7 +4240,9 @@ app.post('/api/student/auth/register', studentAuthLimiter, async (req, res) => {
     accounts.push(account);
     await writeJsonFile('student-accounts', accounts);
 
-    res.status(201).json({ token: signStudentToken(account), student: publicStudentAccount(account) });
+    const token = signStudentToken(account);
+    res.cookie(STUDENT_COOKIE_NAME, token, authCookieOptions(STUDENT_COOKIE_MAX_AGE_MS));
+    res.status(201).json({ token, student: publicStudentAccount(account) });
   } catch (error) {
     console.error('Student registration failed:', error);
     res.status(500).json({ message: 'Could not create your account. Please try again.' });
@@ -4237,11 +4267,18 @@ app.post('/api/student/auth/login', studentAuthLimiter, async (req, res) => {
       return;
     }
 
-    res.json({ token: signStudentToken(account), student: publicStudentAccount(account) });
+    const token = signStudentToken(account);
+    res.cookie(STUDENT_COOKIE_NAME, token, authCookieOptions(STUDENT_COOKIE_MAX_AGE_MS));
+    res.json({ token, student: publicStudentAccount(account) });
   } catch (error) {
     console.error('Student login failed:', error);
     res.status(500).json({ message: 'Could not sign you in. Please try again.' });
   }
+});
+
+app.post('/api/student/auth/logout', (_req, res) => {
+  res.clearCookie(STUDENT_COOKIE_NAME, { path: '/' });
+  res.json({ message: 'Signed out.' });
 });
 
 const PASSWORD_RESET_EXPIRY_MINUTES = 60;
@@ -4376,7 +4413,9 @@ app.post('/api/student/auth/google', studentAuthLimiter, async (req, res) => {
       await writeJsonFile('student-accounts', accounts);
     }
 
-    res.json({ token: signStudentToken(account), student: publicStudentAccount(account) });
+    const token = signStudentToken(account);
+    res.cookie(STUDENT_COOKIE_NAME, token, authCookieOptions(STUDENT_COOKIE_MAX_AGE_MS));
+    res.json({ token, student: publicStudentAccount(account) });
   } catch (error) {
     console.error('Student Google sign-in failed:', error);
     res.status(500).json({ message: 'Could not sign you in with Google. Please try again.' });

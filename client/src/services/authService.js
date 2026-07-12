@@ -22,21 +22,19 @@ export function saveAdminSession(payload, rememberMe) {
   }
 
   if (user) localStorage.setItem(ADMIN_USER_KEY, user);
-
-  const persisted = rememberMe
-    ? localStorage.getItem(ADMIN_TOKEN_KEY)
-    : sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY);
-  if (persisted !== token) {
-    throw new Error(
-      "Signed in, but your browser is blocking this site from staying signed in. Please allow cookies/site data for hiklassacademy.com in your browser's privacy settings, then try again.",
-    );
-  }
+  // Note: if the browser blocks localStorage/sessionStorage, the above calls
+  // silently no-op (see safeStorage.js). That's fine — the server also set an
+  // httpOnly session cookie on this response, which SessionGate (main.jsx)
+  // falls back to verifying, so the admin stays signed in either way.
 }
 
 export function clearAdminSession() {
   localStorage.removeItem(ADMIN_TOKEN_KEY);
   localStorage.removeItem(ADMIN_USER_KEY);
   sessionStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
+  // Also clear the httpOnly session cookie (used as a fallback when browser
+  // storage is blocked); fire-and-forget, nothing to do if it fails.
+  fetch(`${API_URL}/api/admin/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
 }
 
 export async function loginAdmin({ email, password, rememberMe }) {
@@ -44,6 +42,7 @@ export async function loginAdmin({ email, password, rememberMe }) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, rememberMe }),
+    credentials: 'include',
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Unable to sign in.');

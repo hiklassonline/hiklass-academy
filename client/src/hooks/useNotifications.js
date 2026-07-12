@@ -36,6 +36,7 @@ export default function useNotifications() {
     try {
       const res = await fetch(`${API_URL}/api/admin/notifications`, {
         headers: { 'x-admin-token': localStorage.getItem('hiklass-admin-token') || sessionStorage.getItem('hiklass-admin-session-token') || '' },
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
@@ -64,6 +65,7 @@ export default function useNotifications() {
       await fetch(`${API_URL}/api/admin/notifications/${id}/read`, {
         method: 'PATCH',
         headers: { 'x-admin-token': localStorage.getItem('hiklass-admin-token') || '' },
+        credentials: 'include',
       });
     } catch {}
   }, []);
@@ -75,6 +77,7 @@ export default function useNotifications() {
       await fetch(`${API_URL}/api/admin/notifications/mark-all-read`, {
         method: 'POST',
         headers: { 'x-admin-token': localStorage.getItem('hiklass-admin-token') || '' },
+        credentials: 'include',
       });
     } catch {}
   }, []);

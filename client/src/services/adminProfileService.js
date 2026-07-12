@@ -13,7 +13,7 @@ function saveUser(user) {
 }
 
 export async function getAdminProfile() {
-  const res = await fetch(`${API_URL}/api/admin/profile`, { headers: authHeaders() });
+  const res = await fetch(`${API_URL}/api/admin/profile`, { headers: authHeaders(), credentials: 'include' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Failed to load profile.');
   return data;
@@ -24,6 +24,7 @@ export async function updateAdminProfile(data) {
     method: 'PUT',
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+    credentials: 'include',
   });
   const result = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(result.message || 'Failed to update profile.');
@@ -38,6 +39,7 @@ export async function uploadAdminAvatar(file) {
     method: 'POST',
     headers: authHeaders(),
     body: formData,
+    credentials: 'include',
   });
   const result = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(result.message || 'Failed to upload avatar.');
@@ -52,6 +54,7 @@ export async function deleteAdminAvatar() {
   const res = await fetch(`${API_URL}/api/admin/profile/avatar`, {
     method: 'DELETE',
     headers: authHeaders(),
+    credentials: 'include',
   });
   const result = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(result.message || 'Failed to remove avatar.');

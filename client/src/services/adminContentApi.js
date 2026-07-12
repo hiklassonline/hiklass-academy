@@ -2,7 +2,7 @@ import API_URL from '../utils/apiBaseUrl';
 import { clearAdminSession } from './authService.js';
 
 export async function adminApi(token, method, path, body) {
-  const options = { method, headers: { 'x-admin-token': token }, cache: 'no-store' };
+  const options = { method, headers: { 'x-admin-token': token }, cache: 'no-store', credentials: 'include' };
   if (body !== undefined) {
     options.headers['Content-Type'] = 'application/json';
     options.body = JSON.stringify(body);
@@ -26,6 +26,7 @@ export async function adminUploadVoiceNote(token, path, blob) {
     headers: { 'x-admin-token': token },
     cache: 'no-store',
     body: formData,
+    credentials: 'include',
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) {

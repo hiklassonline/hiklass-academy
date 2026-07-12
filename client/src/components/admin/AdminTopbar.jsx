@@ -109,6 +109,7 @@ export default function AdminTopbar({ currentPage, query: searchQuery, setQuery:
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': getStoredAdminToken() },
         body: JSON.stringify({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword, confirmPassword: pwForm.confirmPassword }),
+        credentials: 'include',
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || 'Password change failed.');
