@@ -370,8 +370,8 @@ function TechStack() {
       <h2>Technologies We Teach</h2>
       <div className="aboutTechRow">
         {TECHNOLOGIES.map(({ name, logo }) => (
-          <span className="aboutTechBadge" key={name}>
-            <img className="aboutTechLogo" src={logo} alt={`${name} logo`} loading="lazy" /> {name}
+          <span className="aboutTechBadge" key={name} title={name}>
+            <img className="aboutTechLogo" src={logo} alt={`${name} logo`} loading="lazy" />
           </span>
         ))}
       </div>
