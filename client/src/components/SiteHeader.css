@@ -91,12 +91,14 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    justify-content: space-between;
+    gap: 10px;
     height: auto;
     min-height: 76px;
     padding: 12px 16px;
   }
   .siteHeaderBrand {
+    order: 1;
     min-width: 0;
     flex: 0 1 230px;
   }
@@ -123,6 +125,7 @@
   .siteHeaderLogin,
   .siteHeaderEnroll { display: none; }
   .siteHeaderMenuBtn {
+    order: 4;
     display: inline-flex;
     border: 1px solid #E5E7EB;
     background: #fff;
@@ -132,13 +135,7 @@
   }
 
   .siteHeaderMobileActions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-    margin-left: 14px;
+    display: contents;
   }
 
   .siteHeaderMobileLogin,
@@ -152,11 +149,13 @@
   }
 
   .siteHeaderMobileLogin {
+    order: 2;
     border: 1px solid var(--primary-blue, #1E2F97);
     color: #0149CA;
   }
 
   .siteHeaderMobileEnroll {
+    order: 3;
     border: none;
     background: linear-gradient(135deg, var(--bright-red, #D30D1A), #E11D25);
     color: #fff;
