@@ -331,8 +331,7 @@
 
 .aboutTechTrack {
   display: flex;
-  align-items: center;
-  gap: 24px;
+  align-items: stretch;
   width: max-content;
   animation: aboutTechScroll 32s linear infinite;
 }
@@ -362,31 +361,37 @@
 }
 
 .aboutTechBadge {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 128px;
-  height: 128px;
-  padding: 26px;
-  border-radius: 24px;
-  background: #fff;
-  border: 1px solid var(--about-border);
-  box-shadow: 0 6px 18px rgba(7, 22, 47, 0.05);
+  gap: 10px;
+  padding: 0 40px;
   flex-shrink: 0;
-  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }
 
-.aboutTechBadge:hover {
-  transform: translateY(-4px);
-  border-color: rgba(30, 47, 151, 0.18);
-  box-shadow: 0 16px 32px rgba(7, 22, 47, 0.12);
+.aboutTechBadge::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  right: 0;
+  width: 1px;
+  background: var(--about-border);
 }
 
 .aboutTechLogo {
-  width: 100%;
-  height: 100%;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   flex-shrink: 0;
+}
+
+.aboutTechName {
+  color: #374151;
+  font-weight: 700;
+  font-size: 1.05rem;
+  white-space: nowrap;
 }
 
 /* CTA */

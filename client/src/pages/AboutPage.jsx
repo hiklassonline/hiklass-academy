@@ -373,8 +373,9 @@ function TechStack() {
       <div className="aboutTechMarquee">
         <div className="aboutTechTrack">
           {loopedTechnologies.map(({ name, logo }, index) => (
-            <span className="aboutTechBadge" key={`${name}-${index}`} title={name} aria-hidden={index >= TECHNOLOGIES.length}>
+            <span className="aboutTechBadge" key={`${name}-${index}`} aria-hidden={index >= TECHNOLOGIES.length}>
               <img className="aboutTechLogo" src={logo} alt={index < TECHNOLOGIES.length ? `${name} logo` : ''} loading="lazy" />
+              <span className="aboutTechName">{name}</span>
             </span>
           ))}
         </div>
