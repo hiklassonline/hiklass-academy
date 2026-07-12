@@ -6017,9 +6017,249 @@ app.use('/api', (_req, res) => {
   res.status(404).json({ message: 'API route not found.' });
 });
 
+const SITE_URL = 'https://hiklassacademy.com';
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
+
+let cachedIndexHtml = null;
+function getIndexHtmlTemplate() {
+  if (cachedIndexHtml === null) {
+    const indexPath = path.join(clientDist, 'index.html');
+    cachedIndexHtml = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : '';
+  }
+  return cachedIndexHtml;
+}
+
+function resolveSiteAssetUrl(value) {
+  if (!value) return undefined;
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${SITE_URL}${value.startsWith('/') ? value : `/${value}`}`;
+}
+
+function defaultOrgJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'EducationalOrganization',
+    name: 'HIKLASS Academy',
+    url: `${SITE_URL}/`,
+    logo: DEFAULT_OG_IMAGE,
+    description: 'Practical holiday and short-course digital skills training in Cameroon.',
+    email: 'info@hiklassacademy.com',
+    telephone: '+237651251941',
+    address: { '@type': 'PostalAddress', addressCountry: 'CM' },
+  };
+}
+
+function renderSeoHtml(meta) {
+  const template = getIndexHtmlTemplate();
+  if (!template) return template;
+
+  const title = escapeHtml(meta.title);
+  const description = escapeHtml(meta.description);
+  const url = meta.url;
+  const image = meta.image || DEFAULT_OG_IMAGE;
+  const robots = meta.noIndex ? 'noindex, nofollow' : 'index, follow';
+
+  let html = template;
+  html = html.replace(/<title>.*?<\/title>/s, `<title>${title}</title>`);
+  html = html.replace(/<meta name="description" content=".*?"\s*\/>/s, `<meta name="description" content="${description}" />`);
+  html = html.replace(/<meta name="robots" content=".*?"\s*\/>/s, `<meta name="robots" content="${robots}" />`);
+  html = html.replace(/<link rel="canonical" href=".*?"\s*\/>/s, `<link rel="canonical" href="${url}" />`);
+
+  const ogBlock = `<!-- OG:START -->
+    <meta property="og:site_name" content="HIKLASS Academy" />
+    <meta property="og:type" content="${meta.ogType || 'website'}" />
+    <meta property="og:url" content="${url}" />
+    <meta property="og:title" content="${title}" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:image" content="${image}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${title}" />
+    <meta name="twitter:description" content="${description}" />
+    <meta name="twitter:image" content="${image}" />
+    <!-- OG:END -->`;
+  html = html.replace(/<!-- OG:START -->[\s\S]*?<!-- OG:END -->/, ogBlock);
+
+  const jsonLdScript = `<script type="application/ld+json" id="seo-jsonld">\n${JSON.stringify(meta.jsonLd || defaultOrgJsonLd())}\n</script>`;
+  html = html.replace(/<script type="application\/ld\+json" id="seo-jsonld">[\s\S]*?<\/script>/, jsonLdScript);
+
+  return html;
+}
+
+const STATIC_SEO_ROUTES = {
+  '/': {
+    title: 'HIKLASS Academy Holiday Courses',
+    description: 'Practical holiday and short-course digital skills training in Cameroon — programming, web design, UI/UX, data science, cybersecurity, digital marketing, video editing, AI tools and more.',
+  },
+  '/about': {
+    title: 'About Us | HIKLASS Academy',
+    description: "Learn about HIKLASS Academy's mission, values, lead instructors, and impact helping students in Cameroon build real digital skills.",
+  },
+  '/contact': {
+    title: 'Contact Us | HIKLASS Academy',
+    description: 'Get in touch with HIKLASS Academy by phone, WhatsApp, or email. Find our office hours and location in Cameroon.',
+  },
+  '/blog': {
+    title: 'Blog | HIKLASS Academy',
+    description: 'Articles on digital skills, career advice, and course guidance from the HIKLASS Academy team.',
+  },
+  '/privacy-policy': {
+    title: 'Privacy Policy | HIKLASS Academy',
+    description: 'Read the HIKLASS Academy privacy policy covering how we collect, use, and protect your personal information.',
+  },
+  '/terms-and-conditions': {
+    title: 'Terms & Conditions | HIKLASS Academy',
+    description: 'Read the terms and conditions for enrolling in and using HIKLASS Academy courses and services.',
+  },
+};
+
+async function resolveSeoMeta(pathname) {
+  const cleanPath = pathname.replace(/\/$/, '') || '/';
+  const url = `${SITE_URL}${cleanPath}`;
+
+  if (STATIC_SEO_ROUTES[cleanPath]) {
+    return { ...STATIC_SEO_ROUTES[cleanPath], url };
+  }
+
+  const blogMatch = cleanPath.match(/^\/blog\/(.+)$/);
+  if (blogMatch) {
+    try {
+      const posts = await blogPostsWithDefaults();
+      const post = posts.find((item) => item.slug === blogMatch[1] && item.status === 'Published');
+      if (post) {
+        const resolvedImage = resolveSiteAssetUrl(post.image);
+        return {
+          title: post.seoTitle || post.title,
+          description: post.metaDescription || post.excerpt,
+          url: post.canonicalUrl || url,
+          image: resolvedImage,
+          ogType: 'article',
+          noIndex: Boolean(post.noIndex),
+          jsonLd: {
+            '@context': 'https://schema.org',
+            '@type': 'Article',
+            headline: post.title,
+            description: post.metaDescription || post.excerpt,
+            image: resolvedImage ? [resolvedImage] : undefined,
+            datePublished: post.publishedAt || post.createdAt,
+            dateModified: post.updatedAt || post.publishedAt,
+            author: { '@type': 'Person', name: post.author?.name || 'HIKLASS Academy' },
+            publisher: {
+              '@type': 'Organization',
+              name: 'HIKLASS Academy',
+              logo: { '@type': 'ImageObject', url: DEFAULT_OG_IMAGE },
+            },
+            mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+          },
+        };
+      }
+      return { title: 'Article Not Found | HIKLASS Academy', description: 'This article could not be found.', url, noIndex: true };
+    } catch (error) {
+      console.error('SEO blog lookup failed:', error);
+    }
+  }
+
+  const instructorMatch = cleanPath.match(/^\/instructor\/(.+)$/);
+  if (instructorMatch) {
+    try {
+      const instructors = await readJsonFile('instructors');
+      const instructor = instructors.find((item) => item.id === instructorMatch[1] && item.name);
+      if (instructor) {
+        const fullRole = instructor.professionalTitle || instructor.position || instructor.role || 'Instructor';
+        const shortRole = (instructor.role || instructor.position || fullRole).split('|')[0].trim();
+        const displayTitle = `${instructor.name} — ${shortRole} | HIKLASS Academy`;
+        return {
+          title: displayTitle.length > 65 ? `${instructor.name} | HIKLASS Academy` : displayTitle,
+          description: (instructor.bio || instructor.mission || `${instructor.name} is a ${shortRole} at HIKLASS Academy.`).slice(0, 240),
+          url,
+          image: resolveSiteAssetUrl(instructor.image),
+          ogType: 'profile',
+          jsonLd: {
+            '@context': 'https://schema.org',
+            '@type': 'Person',
+            name: instructor.name,
+            jobTitle: fullRole,
+            description: instructor.bio || '',
+            image: resolveSiteAssetUrl(instructor.image),
+            worksFor: { '@type': 'EducationalOrganization', name: 'HIKLASS Academy', url: `${SITE_URL}/` },
+          },
+        };
+      }
+      return { title: 'Instructor Not Found | HIKLASS Academy', description: 'This instructor profile could not be found.', url, noIndex: true };
+    } catch (error) {
+      console.error('SEO instructor lookup failed:', error);
+    }
+  }
+
+  if (cleanPath.startsWith('/admin') || cleanPath.startsWith('/student')) {
+    return {
+      title: 'HIKLASS Academy',
+      description: 'Sign in to your HIKLASS Academy account.',
+      url,
+      noIndex: true,
+    };
+  }
+
+  return { ...STATIC_SEO_ROUTES['/'], url, noIndex: true };
+}
+
+app.get('/sitemap.xml', async (_req, res) => {
+  try {
+    const urls = [
+      { loc: `${SITE_URL}/`, changefreq: 'daily', priority: '1.0' },
+      { loc: `${SITE_URL}/about`, changefreq: 'monthly', priority: '0.8' },
+      { loc: `${SITE_URL}/contact`, changefreq: 'monthly', priority: '0.7' },
+      { loc: `${SITE_URL}/blog`, changefreq: 'daily', priority: '0.8' },
+      { loc: `${SITE_URL}/privacy-policy`, changefreq: 'yearly', priority: '0.3' },
+      { loc: `${SITE_URL}/terms-and-conditions`, changefreq: 'yearly', priority: '0.3' },
+    ];
+
+    const posts = await blogPostsWithDefaults();
+    posts
+      .filter((post) => post.status === 'Published' && !post.noIndex)
+      .forEach((post) => {
+        urls.push({
+          loc: `${SITE_URL}/blog/${post.slug}`,
+          lastmod: (post.updatedAt || post.publishedAt || '').slice(0, 10) || undefined,
+          changefreq: 'weekly',
+          priority: '0.6',
+        });
+      });
+
+    const instructors = await readJsonFile('instructors');
+    instructors
+      .filter((item) => item.name)
+      .forEach((item) => {
+        urls.push({ loc: `${SITE_URL}/instructor/${item.id}`, changefreq: 'monthly', priority: '0.5' });
+      });
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
+      .map((u) => `  <url>\n    <loc>${u.loc}</loc>\n${u.lastmod ? `    <lastmod>${u.lastmod}</lastmod>\n` : ''}    <changefreq>${u.changefreq}</changefreq>\n    <priority>${u.priority}</priority>\n  </url>`)
+      .join('\n')}\n</urlset>`;
+
+    res.set('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error('Sitemap generation failed:', error);
+    res.status(500).send('Could not generate sitemap.');
+  }
+});
+
 if (fs.existsSync(path.join(clientDist, 'index.html'))) {
-  app.use(express.static(clientDist));
-  app.get('*', (_req, res) => {
+  app.use(express.static(clientDist, { index: false }));
+  app.get('*', async (req, res) => {
+    try {
+      const meta = await resolveSeoMeta(req.path);
+      const html = renderSeoHtml(meta);
+      if (html) {
+        res.set('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+        return;
+      }
+    } catch (error) {
+      console.error('SEO render failed:', error);
+    }
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 } else {

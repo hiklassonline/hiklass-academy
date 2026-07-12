@@ -1,0 +1,24 @@
+# HIKLASS Academy
+
+> HIKLASS Academy is a Cameroon-based training academy offering practical, holiday and short-course digital skills training — programming, web design, UI/UX, data science, cybersecurity, digital marketing, video editing, Microsoft Office, accounting software, AI tools, and more — delivered online, physically, or hybrid.
+
+HIKLASS Academy helps students, young professionals, and career-switchers in Cameroon build real, job-ready digital skills through short, practical courses and bundled learning packages, taught by working practitioners rather than purely academic instructors.
+
+## Key pages
+
+- [Home](https://hiklassacademy.com/): course catalog, packages, pricing, enrollment.
+- [About](https://hiklassacademy.com/about): mission, values, lead instructor, impact stats.
+- [Contact](https://hiklassacademy.com/contact): phone, WhatsApp, email, office hours, location.
+- [Blog](https://hiklassacademy.com/blog): articles on digital skills, career advice, and course guidance.
+- [Privacy Policy](https://hiklassacademy.com/privacy-policy)
+- [Terms & Conditions](https://hiklassacademy.com/terms-and-conditions)
+
+## Enrollment
+
+Prospective students select one or more courses or packages on the homepage, choose a payment method (mobile money, bank transfer, or other supported methods), and submit an enrollment form. Confirmation is sent by email, with WhatsApp available as a fallback contact method if submission fails.
+
+## Contact
+
+- WhatsApp / phone: +237 651 251 941, +237 671 320 385
+- Email: info@hiklassacademy.com
+- Website: https://hiklassacademy.com
