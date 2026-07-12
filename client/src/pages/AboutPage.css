@@ -365,8 +365,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 0 40px;
+  padding: 0 32px;
   flex-shrink: 0;
 }
 
@@ -381,17 +380,10 @@
 }
 
 .aboutTechLogo {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   flex-shrink: 0;
-}
-
-.aboutTechName {
-  color: #374151;
-  font-weight: 700;
-  font-size: 1.05rem;
-  white-space: nowrap;
 }
 
 /* CTA */
