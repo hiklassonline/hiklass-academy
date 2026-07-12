@@ -88,11 +88,28 @@ export default function SiteHeader() {
         <a className="siteHeaderLogin" href="/student/login">Login</a>
       )}
 
-      <a className="siteHeaderEnroll" href="/#enroll">Enroll Now</a>
+      {isStudentLoggedIn ? (
+        <a className="siteHeaderEnroll" href="/student/courses">Courses</a>
+      ) : (
+        <a className="siteHeaderEnroll" href="/#enroll">Enroll Now</a>
+      )}
 
       <button className="siteHeaderMenuBtn" type="button" onClick={() => setOpen((value) => !value)} aria-label="Toggle menu">
         {open ? <X size={22} /> : <Menu size={22} />}
       </button>
+
+      <div className="siteHeaderMobileActions">
+        {isStudentLoggedIn ? (
+          <a className="siteHeaderMobileLogin" href="/student/dashboard">Dashboard</a>
+        ) : (
+          <a className="siteHeaderMobileLogin" href="/student/login">Login</a>
+        )}
+        {isStudentLoggedIn ? (
+          <a className="siteHeaderMobileEnroll" href="/student/courses">Courses</a>
+        ) : (
+          <a className="siteHeaderMobileEnroll" href="/#enroll">Enroll Now</a>
+        )}
+      </div>
     </header>
   );
 }
