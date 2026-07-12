@@ -129,9 +129,8 @@ export default function AdminTopbar({ currentPage, query: searchQuery, setQuery:
 
   return (
     <>
-      <header style={{
+      <header className="adminTopbarHeader" style={{
         position: 'sticky', top: 0, zIndex: 20,
-        display: 'grid', gridTemplateColumns: 'auto minmax(200px, 340px) auto',
         alignItems: 'center', gap: '16px',
         minHeight: '72px', padding: '0 28px',
         background: 'rgba(255,255,255,0.92)',
@@ -139,19 +138,19 @@ export default function AdminTopbar({ currentPage, query: searchQuery, setQuery:
         backdropFilter: 'blur(18px)',
       }}>
         {/* Left: title + hamburger */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div className="adminTopbarLeft" style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
           <button type="button" onClick={() => { if (window.innerWidth <= 1180) { setSidebarOpen((prev) => !prev); } else { setSidebarCollapsed((prev) => { const next = !prev; try { localStorage.setItem('adminSidebarCollapsed', JSON.stringify(next)); } catch {} return next; }); } }} aria-label="Toggle sidebar" style={{
-            display: 'inline-grid', placeItems: 'center', width: 40, height: 40,
+            display: 'inline-grid', placeItems: 'center', width: 40, height: 40, flexShrink: 0,
             background: 'transparent', border: '1px solid transparent', borderRadius: 8,
             cursor: 'pointer', color: '#111827',
           }}>
             <Menu size={22} />
           </button>
-          <h1 style={{ margin: 0, color: '#111827', fontSize: '1.35rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{currentPage?.label || 'Dashboard'}</h1>
+          <h1 style={{ margin: 0, color: '#111827', fontSize: '1.35rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentPage?.label || 'Dashboard'}</h1>
         </div>
 
         {/* Center: search */}
-        <div ref={searchRef} style={{ position: 'relative', width: '100%' }}>
+        <div ref={searchRef} className="adminTopbarSearchWrap" style={{ position: 'relative', width: '100%' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px',
             minHeight: 42, padding: '0 12px',
@@ -215,7 +214,7 @@ export default function AdminTopbar({ currentPage, query: searchQuery, setQuery:
         </div>
 
         {/* Right: icons + profile */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
+        <div className="adminTopbarRight" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
           {/* Refresh */}
           <button type="button" onClick={handleRefresh} disabled={refreshing} aria-label="Refresh dashboard" style={{
             display: 'inline-grid', placeItems: 'center', width: 40, height: 40,
@@ -313,7 +312,7 @@ export default function AdminTopbar({ currentPage, query: searchQuery, setQuery:
               cursor: 'pointer', color: '#111827',
             }}>
               <AdminAvatar key={adminUser.avatarUrl || 'no-avatar'} user={adminUser} size={36} />
-              <div style={{ textAlign: 'left', display: 'none', '@media (min-width: 768px)': { display: 'block' } }}>
+              <div className="adminTopbarUserMeta" style={{ textAlign: 'left' }}>
                 <strong style={{ display: 'block', fontSize: 13 }}>{adminUser.name || 'Admin'}</strong>
                 <small style={{ display: 'block', color: '#6B7280', fontSize: 11 }}>{adminUser.role || 'Super Admin'}</small>
               </div>
@@ -379,6 +378,7 @@ export default function AdminTopbar({ currentPage, query: searchQuery, setQuery:
         }}>
           <div onClick={(e) => e.stopPropagation()} style={{
             background: '#FFFFFF', borderRadius: 16, width: '90%', maxWidth: 440,
+            maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', boxSizing: 'border-box',
             boxShadow: '0 20px 60px rgba(0,0,0,0.2)', padding: '28px 32px 24px',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -462,8 +462,35 @@ export default function AdminTopbar({ currentPage, query: searchQuery, setQuery:
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        .adminTopbarHeader {
+          display: grid;
+          grid-template-columns: auto minmax(200px, 340px) auto;
+          grid-template-areas: "left search right";
+        }
+        .adminTopbarLeft { grid-area: left; }
+        .adminTopbarSearchWrap { grid-area: search; }
+        .adminTopbarRight { grid-area: right; }
+
+        .adminTopbarUserMeta { display: none; }
+        @media (min-width: 768px) {
+          .adminTopbarUserMeta { display: block; }
+        }
+
         @media (max-width: 768px) {
-          .topbar-search-wide { display: block; }
+          .adminTopbarHeader {
+            grid-template-columns: 1fr auto;
+            grid-template-areas:
+              "left right"
+              "search search";
+            gap: 10px;
+            padding: 10px 16px !important;
+            min-height: auto !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .adminTopbarHeader { padding: 10px 12px !important; }
         }
       `}</style>
     </>

@@ -74,6 +74,20 @@ export default function StudentPortalLayout({ activePage, pageTitle, announcemen
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    function onKeyDown(event) {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [sidebarOpen]);
+
   function logout() {
     clearStudentSession();
     window.location.assign('/');

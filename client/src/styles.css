@@ -1231,7 +1231,6 @@ textarea {
 .button.whatsapp {
   justify-content: center;
   min-height: 58px;
-  height: 58px;
   width: 100%;
   padding: 0 20px;
   background: var(--whatsapp-green);
@@ -1530,6 +1529,8 @@ textarea {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
   background: linear-gradient(180deg, rgba(9, 17, 56, 0.55) 0%, rgba(9, 17, 56, 0) 45%);
 }
 
@@ -2057,7 +2058,6 @@ textarea {
 
 .courseOrderActionButton {
   min-height: 58px;
-  height: 58px;
   width: 100%;
   border-radius: 18px;
 }
@@ -2273,8 +2273,9 @@ textarea {
 
 .selectedPaymentMethodSummary {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   width: 100%;
   padding: 12px 14px;
   background: rgba(30, 47, 151, 0.06);
@@ -3370,6 +3371,10 @@ textarea {
     min-height: 420px;
   }
 
+  .skillChip {
+    display: none;
+  }
+
   .section {
     padding: 56px 4vw;
   }
@@ -3459,6 +3464,14 @@ textarea {
   .courseOrderActions {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .courseOrderWhatsappBtn {
+    order: 1;
+  }
+
+  .courseOrderSubmitBtn {
+    order: 2;
   }
 
   .floatingEnroll {

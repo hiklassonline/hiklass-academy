@@ -324,7 +324,7 @@
 }
 .aboutCtaCopy h2 { margin: 0 0 6px; color: #fff; font-size: 1.3rem; }
 .aboutCtaCopy p { margin: 0; color: rgba(255, 255, 255, 0.82); max-width: 560px; }
-.aboutCtaActions { display: flex; gap: 12px; }
+.aboutCtaActions { display: flex; flex-wrap: wrap; gap: 12px; }
 
 @media (max-width: 1100px) {
   .aboutHero,
@@ -341,4 +341,6 @@
   .aboutHeroStats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .aboutValuesGrid { grid-template-columns: 1fr; }
   .aboutImpactStats { grid-template-columns: 1fr 1fr; }
+  .aboutCta { padding: 24px 20px; }
+  .aboutCtaActions { justify-content: center; width: 100%; }
 }

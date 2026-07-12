@@ -1402,12 +1402,12 @@ function EnrollmentForm({ selectedCourses, selectedPackages, setSelectedCourses,
         </fieldset>
 
         <div className="courseOrderActions">
-          <button className="button submitButton courseOrderActionButton" type="submit" disabled={!canSubmit}>
+          <button className="button submitButton courseOrderActionButton courseOrderSubmitBtn" type="submit" disabled={!canSubmit}>
             {submitting ? <img src={uiAssets.loadingSpinner} alt="" /> : <Send size={22} aria-hidden="true" />}
             {submitting ? 'Sending...' : 'Submit Course Order'}
           </button>
           <a
-            className="button whatsapp courseOrderActionButton"
+            className="button whatsapp courseOrderActionButton courseOrderWhatsappBtn"
             href={`https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappText}`}
             target="_blank"
             rel="noreferrer"
