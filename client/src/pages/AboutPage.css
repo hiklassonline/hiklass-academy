@@ -365,7 +365,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 32px;
+  padding: 0 44px;
   flex-shrink: 0;
 }
 
@@ -380,8 +380,8 @@
 }
 
 .aboutTechLogo {
-  width: 36px;
-  height: 36px;
+  width: 72px;
+  height: 72px;
   object-fit: contain;
   flex-shrink: 0;
 }
