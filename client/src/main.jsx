@@ -1406,15 +1406,17 @@ function EnrollmentForm({ selectedCourses, selectedPackages, setSelectedCourses,
             {submitting ? <img src={uiAssets.loadingSpinner} alt="" /> : <Send size={22} aria-hidden="true" />}
             {submitting ? 'Sending...' : 'Submit Course Order'}
           </button>
-          <a
-            className="button whatsapp courseOrderActionButton courseOrderWhatsappBtn"
-            href={`https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappText}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <WhatsAppBrandIcon size={22} />
-            <span>Order via WhatsApp</span>
-          </a>
+          {status.type === 'error' ? (
+            <a
+              className="button whatsapp courseOrderActionButton courseOrderWhatsappBtn"
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappText}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <WhatsAppBrandIcon size={22} />
+              <span>Order via WhatsApp</span>
+            </a>
+          ) : null}
         </div>
 
         {status.message ? (
