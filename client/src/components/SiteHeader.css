@@ -96,7 +96,16 @@
     min-height: 76px;
     padding: 12px 16px;
   }
-  .siteHeaderBrand { margin-right: auto; min-width: 0; }
+  .siteHeaderBrand {
+    margin-right: auto;
+    min-width: 0;
+    flex: 0 1 230px;
+  }
+  .siteHeaderBrand img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
   .siteHeaderNav {
     display: none;
     position: absolute;
@@ -154,14 +163,9 @@
 }
 
 @media (max-width: 640px) {
-  .siteHeaderBrand img { width: 190px; }
   .siteHeaderMobileLogin,
   .siteHeaderMobileEnroll {
     font-size: 0.7rem;
     padding: 7px 8px;
   }
-}
-
-@media (max-width: 420px) {
-  .siteHeaderBrand img { width: 145px; }
 }
